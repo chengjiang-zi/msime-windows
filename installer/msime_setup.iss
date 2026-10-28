@@ -1339,8 +1339,8 @@ end;
 { 把临时目录下 dictionary_source 的文本源还原成数据目录里的 msime.db、english.db、others.db、dict_japanese.dat。
   旧词库已在 PrepareToInstall 里删掉，这一步失败新版本就没有词库可用。
   还原程序先全部建成 .building，整套成功才替换，失败不留半套文件；明细追加在数据目录的 logs\dictionary-build.log。
-  注意 ssPostInstall 里抛异常并不会中止安装：Inno 只弹「Runtime error」，安装照样算成功，CurStepChanged
-  后面的步骤（回放、登录任务、目录权限）全被跳过。所以失败先让用户就地重试，放弃了才抛。}
+  注意 ssPostInstall 里抛异常不会撤销已复制的文件，CurStepChanged 后面的步骤（回放、登录任务、
+  目录权限）也会被跳过。个人版另外用完成页提示和非零退出码报告未完成；失败先让用户就地重试。}
 procedure BuildDictionaries;
 var
   BuildPath: String;
@@ -1839,8 +1839,8 @@ procedure CurStepChanged(CurStep: TSetupStep);begin
     { 偏好写入放在最后：它失败只弹提示，不能挡住上面这些必需步骤。}
     ApplyNetworkChoiceToUserConfig;
 #endif
-    { TSF 的语言配置要以原用户身份装进键盘列表：提权进程的 HKCU 指向管理员账户，写进去当前用户
-      看不到（见 server/src/settings/input_method_install.h）。放在最后，失败也不影响装好的文件。}
+    { TSF 的语言配置要写入桌面用户的键盘列表：提权进程的 HKCU 可能指向另一个管理员账户。
+      失败时已复制的文件会保留，但安装结果会标记为未完成。}
     RegisterProfileForUser;
     PersonalPostInstallCompleted := True;
   end;

@@ -114,6 +114,10 @@ bool CaptureCandidate(HWND window, HWND background, const wchar_t *name) {
 } // namespace
 
 int main(int argc, char **argv) {
+  if (argc > 2 || (argc == 2 && std::string(argv[1]) != "--horizontal-navigation")) {
+    std::cerr << "Unexpected interactive smoke-test arguments.\n";
+    return 1;
+  }
   const bool testHorizontalNavigation =
       argc == 2 && std::string(argv[1]) == "--horizontal-navigation";
   if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))

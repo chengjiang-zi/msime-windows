@@ -55,11 +55,17 @@ foreach ($layout in @('vertical', 'horizontal')) {
     if ($server.HasExited) { throw "Personal UI Server exited: $($server.ExitCode)" }
     $env:CHENGJIANG_SMOKE_SCREENSHOT_DIR = Join-Path (Join-Path $env:RUNNER_TEMP 'personal-tsf-screenshots') $layout
     New-Item -ItemType Directory -Path $env:CHENGJIANG_SMOKE_SCREENSHOT_DIR -Force | Out-Null
-    $arguments = if ($layout -eq 'horizontal') { @('--horizontal-navigation') } else { @() }
-    & (Join-Path $build 'Release/personal-tsf-interactive-smoke.exe') @arguments
+    # Keep this an array even for one argument: splatting a bare string passes
+    # its characters separately instead of the complete switch.
+    $arguments = @(if ($layout -eq 'horizontal') { '--horizontal-navigation' })
+    & (Join-Path $build 'Release/personal-tsf-interactive-smoke.exe') @arguments |
+        Tee-Object -Variable smokeLines | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -eq 77) {
         Write-Host "SKIP: focus was unavailable for $layout; no real-input test was performed."
     } elseif ($LASTEXITCODE -ne 0) {
         throw "Interactive TSF smoke failed for $layout`: $LASTEXITCODE"
+    } elseif ($layout -eq 'horizontal' -and
+              -not (($smokeLines -join "`n").Contains('PASS: six right keys'))) {
+        throw 'The horizontal navigation scenario did not run.'
     }
 }

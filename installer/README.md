@@ -1,5 +1,7 @@
 # Metasequoia IME Installer
 
+> **个人版开发说明：** 以下是上游的打包和证书文档，部分发布通道、路径与证书说明不适用于本分支。个人版安装器目前只允许在一次性 GitHub 托管测试机打包；请不要在日常电脑上运行本文所列的证书导入脚本。该脚本会修改计算机的受信任证书存储。实际进度见[并存改造记录](../docs/personal-edition-isolation.md)。
+
 本目录的脚本从 Windows 合仓目录收集产物、签名、用 Inno Setup 打成安装包。它服务四条流程：
 
 - **正式发布**：由 `MSIME-Windows` 的 release workflow 驱动，用真实证书签名包内全部 EXE/DLL 和最终安装包；产物是挂在 Release 上的 `MetasequoiaIME_Setup_v<版本>.exe`，并携带与 Release 二进制匹配的 PDB 符号文件。见下面「CI 契约」
