@@ -352,6 +352,9 @@ jobs:
           ./tests/side-by-side-ci.ps1
           -PersonalInstaller (Join-Path $PWD "Output/ChengjiangIME_Setup_v$env:TARGET_VERSION.exe")
           -DevCertificate $env:DEV_CERT_PATH
+      - name: Check whether the disposable desktop can receive input
+        shell: pwsh
+        run: pwsh -STA -File ./installer/tests/interactive-desktop-probe.ps1 -ResultPath "${{ runner.temp }}/desktop-probe.txt"
       - name: Name the artifact and record its checksum
         id: asset
         shell: pwsh
