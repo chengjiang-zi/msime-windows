@@ -41,7 +41,7 @@ begin
     Action := Definition.Actions.Create(0); { TASK_ACTION_EXEC }
     Action.Path := Executable;
     Stage := 'register task';
-    Registered := Folder.RegisterTaskDefinition(TaskName, Definition, 6, Sid, Null, 3, Null);
+    Registered := Folder.RegisterTask(TaskName, Definition.XmlText, 6, Sid, Unassigned, 3, Unassigned);
     Result := not VarIsNull(Registered);
   except
     Log('Could not register the personal watchdog task at ' + Stage + ': ' + GetExceptionMessage);
