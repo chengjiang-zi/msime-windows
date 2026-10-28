@@ -263,3 +263,45 @@ if ($remaining) {
     }
 }
 Write-Host 'Side-by-side install, overlap rejection and personal uninstall preserved the upstream IME.'
+
+# Reverse the uninstall order as well: reinstall the personal edition, then
+# remove upstream while the personal Server is running.
+$code = Run-Installer $PersonalInstaller $personalRoot (Join-Path $taskRoot 'personal-reinstall.log')
+if ($code -ne 0) { throw "Personal reinstall failed: $code" }
+$personalState = Get-ItemProperty -LiteralPath $personalKey
+$reverseSentinel = Join-Path $personalData 'reverse-uninstall-sentinel.txt'
+[IO.File]::WriteAllText($reverseSentinel, 'personal data must remain untouched')
+$personalProcess = Get-Process -Name 'ChengjiangImeServer' -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $personalProcess) {
+    $personalProcess = Start-Process -FilePath $personalState.ServerPath `
+        -ArgumentList '--watchdog-managed', '--pipe-probe' `
+        -WorkingDirectory (Split-Path -Parent $personalState.ServerPath) -WindowStyle Hidden -PassThru
+    Start-Sleep -Seconds 3
+    $personalProcess.Refresh()
+    if ($personalProcess.HasExited) { throw 'Personal Server did not stay running for reverse uninstall.' }
+}
+$originalUninstaller = Join-Path $env:ProgramFiles 'metasequoiaime\unins000.exe'
+if (-not (Test-Path -LiteralPath $originalUninstaller -PathType Leaf)) { throw 'Upstream uninstaller is missing.' }
+$upstreamUninstall = Start-Process -FilePath $originalUninstaller `
+    -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -WindowStyle Hidden -PassThru
+if (-not $upstreamUninstall.WaitForExit(180000)) {
+    Stop-Process -Id $upstreamUninstall.Id -Force -ErrorAction SilentlyContinue
+    throw 'Upstream uninstall timed out.'
+}
+$upstreamUninstall.Refresh()
+if ($upstreamUninstall.ExitCode -ne 0) { throw "Upstream uninstall failed: $($upstreamUninstall.ExitCode)" }
+if ([IO.File]::ReadAllText($reverseSentinel) -ne 'personal data must remain untouched') {
+    throw 'Upstream uninstall changed personal data.'
+}
+if (-not (Get-Process -Id $personalProcess.Id -ErrorAction SilentlyContinue)) {
+    throw 'Upstream uninstall stopped the personal Server.'
+}
+if (-not (Is-KeyboardListed $personalProfile)) { throw 'Upstream uninstall removed the personal profile.' }
+foreach ($view in @([Microsoft.Win32.RegistryView]::Registry64, [Microsoft.Win32.RegistryView]::Registry32)) {
+    if ((Get-RegisteredDll $personalClsid $view) -notmatch '(?i)\\IME\\ChengjiangIME\\') {
+        throw "Upstream uninstall changed personal COM registration in $view."
+    }
+}
+& (Join-Path $probeBuild 'Release/msime-ipc-probe.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Personal IPC failed after upstream uninstall.' }
+Write-Host 'Upstream uninstall preserved the running personal edition and its data.'
