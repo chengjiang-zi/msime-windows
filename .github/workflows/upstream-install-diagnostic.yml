@@ -25,6 +25,69 @@ permissions:
   actions: read
 
 jobs:
+  limited-no-trust:
+    name: Test ordinary preview with a restricted desktop token
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.package_run_id != '' }}
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: personal-isolation-test-installer
+          path: ${{ runner.temp }}/personal-test-package
+          run-id: ${{ inputs.package_run_id }}
+          github-token: ${{ github.token }}
+      - name: Install without trusting the development certificate and test limited input
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted') { throw 'Disposable runner required.' }
+          $files = @(Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/personal-test-package" -Recurse -File)
+          $installers = @($files | Where-Object Name -Like 'ChengjiangIME_Setup_*.exe')
+          $certificates = @($files | Where-Object Name -eq 'dev-build.cer')
+          if ($installers.Count -ne 1 -or $certificates.Count -ne 1) { throw 'Unexpected test artifact contents.' }
+          $cert = [Security.Cryptography.X509Certificates.X509Certificate2]::new($certificates[0].FullName)
+          $signature = Get-AuthenticodeSignature -LiteralPath $installers[0].FullName
+          if ($cert.Subject -ne 'CN=Chengjiang IME Personal Dev Build Code Signing' -or
+              -not $signature.SignerCertificate -or $signature.SignerCertificate.Thumbprint -ne $cert.Thumbprint -or
+              $signature.Status -eq 'Valid') { throw 'Unexpected or trusted development signature.' }
+          function Assert-NotTrusted {
+            foreach ($store in @('Cert:\LocalMachine\Root', 'Cert:\LocalMachine\TrustedPublisher',
+                                 'Cert:\CurrentUser\Root', 'Cert:\CurrentUser\TrustedPublisher')) {
+              if (Get-ChildItem -LiteralPath $store | Where-Object Thumbprint -eq $cert.Thumbprint) {
+                throw 'The development certificate is trusted.'
+              }
+            }
+          }
+          Assert-NotTrusted
+          $languages = Get-WinUserLanguageList
+          if (-not ($languages | Where-Object { $_.LanguageTag -like 'zh-*' })) {
+            $languages.Add('zh-Hans-CN'); Set-WinUserLanguageList -LanguageList $languages -Force
+          }
+          $setup = Start-Process -FilePath $installers[0].FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -WindowStyle Hidden -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Personal setup failed: $($setup.ExitCode)" }
+          $desktop = Join-Path $env:RUNNER_TEMP 'limited-desktop.txt'
+          & pwsh -STA -File ./installer/tests/interactive-desktop-probe.ps1 -ResultPath $desktop
+          if ($LASTEXITCODE -ne 0 -or [IO.File]::ReadAllText($desktop).Trim() -ne 'interactive') { throw 'No interactive desktop.' }
+          $build = Join-Path $env:RUNNER_TEMP 'limited-token-build'
+          cmake -S tests/limited-token-launch -B $build -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'Limited launcher configuration failed.' }
+          cmake --build $build --config Release --parallel
+          if ($LASTEXITCODE -ne 0) { throw 'Limited launcher build failed.' }
+          Get-Process -Name ChengjiangImeWatchdog, ChengjiangImeServer -ErrorAction SilentlyContinue | Stop-Process -Force
+          $log = Join-Path $env:RUNNER_TEMP 'limited-input.log'
+          & "$build/Release/personal-limited-token-launch.exe" (Get-Command pwsh).Source -NoProfile -File `
+            (Join-Path $env:GITHUB_WORKSPACE 'installer/tests/limited-token-smoke.ps1') -DesktopResult $desktop -LogPath $log
+          $result = $LASTEXITCODE
+          if (Test-Path $log) { Get-Content $log | Write-Host }
+          Assert-NotTrusted
+          if ($result -ne 0 -or -not (Test-Path $log) -or
+              -not ([IO.File]::ReadAllText($log).Contains('PASS: personal TSF committed Chinese text')) -or
+              ([IO.File]::ReadAllText($log).Contains('SKIP:'))) {
+            throw "Restricted-token input did not complete successfully ($result)."
+          }
+          Write-Host 'PASS: restricted non-elevated desktop token committed Chinese text without certificate trust.'
   package-input:
     name: Retest input with a previously built package
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.package_run_id != '' }}

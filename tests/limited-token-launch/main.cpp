@@ -1,0 +1,83 @@
+#include <Windows.h>
+
+#include <iostream>
+#include <string>
+#include <vector>
+
+namespace {
+int Fail(const char *stage) {
+  std::cerr << stage << " failed with Windows error " << GetLastError() << '\n';
+  return 1;
+}
+bool HostedRunner() {
+  wchar_t value[64]{};
+  if (!GetEnvironmentVariableW(L"GITHUB_ACTIONS", value, 64) || std::wstring(value) != L"true") return false;
+  if (!GetEnvironmentVariableW(L"RUNNER_ENVIRONMENT", value, 64) || std::wstring(value) != L"github-hosted") return false;
+  return GetEnvironmentVariableW(L"RUNNER_OS", value, 64) && std::wstring(value) == L"Windows";
+}
+}
+
+// CI-only: same desktop SID, but deny Administrators and lower the integrity
+// level. This approximates a limited token; it is not a separate standard user.
+int wmain(int argc, wchar_t **argv) {
+  if (!HostedRunner() || argc < 2) return 1;
+  HANDLE source = nullptr;
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY |
+                        TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_PRIVILEGES, &source))
+    return Fail("OpenProcessToken");
+  TOKEN_PRIVILEGES privilege{};
+  privilege.PrivilegeCount = 1;
+  if (!LookupPrivilegeValueW(nullptr, SE_IMPERSONATE_NAME, &privilege.Privileges[0].Luid)) return Fail("LookupPrivilegeValue");
+  privilege.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+  SetLastError(ERROR_SUCCESS);
+  if (!AdjustTokenPrivileges(source, FALSE, &privilege, 0, nullptr, nullptr) || GetLastError() != ERROR_SUCCESS)
+    return Fail("AdjustTokenPrivileges");
+  BYTE adminBuffer[SECURITY_MAX_SID_SIZE]{};
+  DWORD adminBytes = sizeof(adminBuffer);
+  if (!CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, adminBuffer, &adminBytes)) return Fail("Create admin SID");
+  SID_AND_ATTRIBUTES disabled{adminBuffer, 0};
+  HANDLE limited = nullptr;
+  if (!CreateRestrictedToken(source, DISABLE_MAX_PRIVILEGE, 1, &disabled, 0, nullptr, 0, nullptr, &limited))
+    return Fail("CreateRestrictedToken");
+  CloseHandle(source);
+  BYTE mediumBuffer[SECURITY_MAX_SID_SIZE]{};
+  DWORD mediumBytes = sizeof(mediumBuffer);
+  if (!CreateWellKnownSid(WinMediumLabelSid, nullptr, mediumBuffer, &mediumBytes)) return Fail("Create medium SID");
+  TOKEN_MANDATORY_LABEL label{};
+  label.Label.Sid = mediumBuffer;
+  label.Label.Attributes = SE_GROUP_INTEGRITY;
+  if (!SetTokenInformation(limited, TokenIntegrityLevel, &label,
+                           sizeof(label) + GetLengthSid(mediumBuffer))) return Fail("Set medium integrity");
+  TOKEN_ELEVATION elevation{};
+  DWORD returned = 0;
+  if (!GetTokenInformation(limited, TokenElevation, &elevation, sizeof(elevation), &returned)) return Fail("Query elevation");
+  if (elevation.TokenIsElevated) {
+    std::cerr << "Restricted token is still reported as elevated; test is inconclusive.\n";
+    CloseHandle(limited);
+    return 1;
+  }
+  std::wstring command;
+  for (int index = 1; index < argc; ++index) {
+    const std::wstring value = argv[index];
+    if (value.find(L'"') != std::wstring::npos || (!value.empty() && value.back() == L'\\')) return 1;
+    if (!command.empty()) command += L' ';
+    command += L'"' + value + L'"';
+  }
+  STARTUPINFOW startup{sizeof(startup)};
+  startup.dwFlags = STARTF_USESHOWWINDOW;
+  startup.wShowWindow = SW_HIDE;
+  PROCESS_INFORMATION process{};
+  const BOOL started = CreateProcessWithTokenW(limited, 0, argv[1], command.data(), 0, nullptr, nullptr,
+                                                &startup, &process);
+  const DWORD error = GetLastError();
+  CloseHandle(limited);
+  if (!started) { SetLastError(error); return Fail("CreateProcessWithTokenW"); }
+  std::cout << "PASS: launched with medium integrity and a non-elevated restricted token.\n";
+  const DWORD wait = WaitForSingleObject(process.hProcess, 360000);
+  DWORD result = 1;
+  if (wait == WAIT_OBJECT_0) GetExitCodeProcess(process.hProcess, &result);
+  else { TerminateProcess(process.hProcess, 1); std::cerr << "Limited probe timed out.\n"; }
+  CloseHandle(process.hThread);
+  CloseHandle(process.hProcess);
+  return static_cast<int>(result);
+}
