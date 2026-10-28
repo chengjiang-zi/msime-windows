@@ -36,7 +36,13 @@ $sentinelValue = 'upstream data must remain untouched'
 function Run-Installer([string]$File, [string]$DataDir, [string]$Log) {
     $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART',
         "/DATADIR=`"$DataDir`"", "/LOG=`"$Log`"")
-    $process = Start-Process -FilePath $File -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
+    $process = Start-Process -FilePath $File -ArgumentList $arguments -WindowStyle Hidden -PassThru
+    if (-not $process.WaitForExit(180000)) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $Log) { Get-Content -LiteralPath $Log | Select-Object -Last 80 | Write-Host }
+        throw "Installer timed out: $File"
+    }
+    $process.Refresh()
     return $process.ExitCode
 }
 
@@ -207,7 +213,12 @@ if (-not [string]::Equals($expectedInstall, $actualInstall, [StringComparison]::
 $uninstaller = Join-Path $actualInstall 'unins000.exe'
 if (-not (Test-Path -LiteralPath $uninstaller -PathType Leaf)) { throw 'Personal uninstaller is missing.' }
 $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' `
-    -WindowStyle Hidden -Wait -PassThru
+    -WindowStyle Hidden -PassThru
+if (-not $uninstall.WaitForExit(180000)) {
+    Stop-Process -Id $uninstall.Id -Force -ErrorAction SilentlyContinue
+    throw 'Personal uninstall timed out.'
+}
+$uninstall.Refresh()
 if ($uninstall.ExitCode -ne 0) { throw "Personal uninstall failed: $($uninstall.ExitCode)" }
 Assert-OriginalIntact $originalServer $originalProcess.Id
 if ([IO.File]::ReadAllText($personalSentinel) -ne 'unrelated user file') {

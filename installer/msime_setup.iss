@@ -655,6 +655,13 @@ end;
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   Result := False;
+  { Silent installs validate the requested path in PrepareToInstall. A
+    rejected custom wizard page can otherwise leave a hidden setup waiting. }
+  if WizardSilent and (DataDirPage <> nil) and (PageID = DataDirPage.ID) then
+  begin
+    Result := True;
+    exit;
+  end;
   if (NetworkPage <> nil) and (PageID = NetworkPage.ID) then
     Result := UserConfigExistsBeforeInstall;
 end;
