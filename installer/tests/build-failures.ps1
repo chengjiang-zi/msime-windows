@@ -57,18 +57,29 @@ try {
     $global:MsimeManifestArguments = @()
     $global:MsimeManifestExit = 0
     $expectedInputResource = '-inputresource:' + $releaseBinary + ';#1'
+    $global:MsimeEmbeddedUiAccess = 'true'
     function global:Invoke-MsimeManifestProbe {
         $global:MsimeManifestArguments = @($args)
         $global:LASTEXITCODE = 0
         if ($args.Count -eq 2 -and $args[0] -like '-inputresource:*;#1') {
             $outPath = ($args[1] -replace '^-out:', '')
-            [IO.File]::WriteAllText($outPath, '<assembly><requestedExecutionLevel uiAccess="true" /></assembly>')
+            [IO.File]::WriteAllText($outPath, "<assembly><requestedExecutionLevel uiAccess=`"$global:MsimeEmbeddedUiAccess`" /></assembly>")
         }
     }
     & (Join-Path $ciScripts 'embed-server-manifest.ps1') -BuildDir 'server/build-release/bin/Release' -ManifestTool Invoke-MsimeManifestProbe
     if ($global:MsimeManifestArguments.Count -ne 2 -or $global:MsimeManifestArguments[0] -ne $expectedInputResource) {
         throw 'CI manifest embedding did not verify resource 1'
     }
+    $rejected = $false
+    try { & (Join-Path $ciScripts 'embed-server-manifest.ps1') -BuildDir 'server/build-release/bin/Release' -ManifestTool Invoke-MsimeManifestProbe -ExpectedUiAccess false }
+    catch { $rejected = $_.Exception.Message -match 'does not have uiAccess=false' }
+    if (-not $rejected) { throw 'Ordinary preview accepted the wrong uiAccess value' }
+    $global:MsimeEmbeddedUiAccess = 'false'
+    & (Join-Path $ciScripts 'embed-server-manifest.ps1') -BuildDir 'server/build-release/bin/Release' -ManifestTool Invoke-MsimeManifestProbe -ExpectedUiAccess false
+    $rejected = $false
+    try { & (Join-Path $ciScripts 'embed-server-manifest.ps1') -BuildDir 'server/build-release/bin/Release' -ManifestTool Invoke-MsimeManifestProbe }
+    catch { $rejected = $_.Exception.Message -match 'does not have uiAccess=true' }
+    if (-not $rejected) { throw 'Default manifest check accepted a missing uiAccess privilege' }
     Remove-Item Function:/cmake
     # Each installer entry must stop before staging/signing when the Server build fails.
     [IO.File]::WriteAllText((Join-Path $fixture 'windows/scripts/lcompile-release-both.ps1'), '# successful synthetic component build')
@@ -89,6 +100,6 @@ try {
 } finally {
     Set-Location $originalLocation
     Remove-Item Function:/cmake, Function:/Invoke-MsimeManifestProbe -ErrorAction SilentlyContinue
-    Remove-Variable MsimeBuildCalls, MsimeFailAt, MsimeManifestExit, MsimeManifestArguments -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable MsimeBuildCalls, MsimeFailAt, MsimeManifestExit, MsimeManifestArguments, MsimeEmbeddedUiAccess -Scope Global -ErrorAction SilentlyContinue
     if (Test-Path $fixture) { Remove-Item $fixture -Recurse -Force }
 }
