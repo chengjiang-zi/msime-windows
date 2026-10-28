@@ -1798,26 +1798,46 @@ begin
   Result := '';
 end;
 
-{ TSF 的语言配置要以原用户身份装进键盘列表：提权进程的 HKCU 指向管理员账户，写进去当前用户看不到
-  （见 server/src/settings/input_method_install.h）。放在最后，失败也不影响装好的文件。}
+{ The administrator may be a different account. Run profile registration in
+  the desktop user's interactive session and confirm the intended HKU entry. }
 procedure RegisterProfileForUser;
 var
-  ErrorCode: Integer;
-  Executable: String;
+  HelperPath: String;
+  SettingsPath: String;
+  KeyboardKey: String;
+  Params: String;
+  ResultCode: Integer;
+  Attempt: Integer;
+  Registered: Boolean;
 begin
-  Executable := ExpandConstant(
-    '{commonpf64}\chengjiangime\server\ChengjiangImeSettings.exe');
-  if not FileExists(Executable) then
-  begin
-    Log('settings program missing, skipping keyboard list registration');
-    Exit;
-  end;
-  if not ShellExecAsOriginalUser('', Executable, '--register-profile', '', SW_HIDE,
-    ewWaitUntilTerminated, ErrorCode) then
-    Log('could not start the settings program as the original user: ' +
-      IntToStr(ErrorCode))
-  else
-    Log('keyboard list registration exit code: ' + IntToStr(ErrorCode));
+  HelperPath := ExpandConstant('{commonpf64}\chengjiangime\server\register-personal-watchdog.ps1');
+  SettingsPath := ExpandConstant('{commonpf64}\chengjiangime\server\ChengjiangImeSettings.exe');
+  KeyboardKey := PersonalInteractiveSid + '\Control Panel\International\User Profile\zh-Hans-CN';
+  if RegValueExists(HKU, KeyboardKey,
+    '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}') then
+    exit;
+  Params := '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + HelperPath +
+    '" -UserSid "' + PersonalInteractiveSid + '" -TaskName "Chengjiang IME Register Profile C4548683" -Executable "' +
+    SettingsPath + '" -Arguments "--register-profile" -RunNow';
+  Registered := False;
+  ResultCode := -1;
+  if FileExists(HelperPath) and FileExists(SettingsPath) then
+    if Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), Params, '', SW_HIDE,
+      ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+      for Attempt := 1 to 80 do
+      begin
+        if RegValueExists(HKU, KeyboardKey,
+          '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}') then
+        begin
+          Registered := True;
+          break;
+        end;
+        Sleep(250);
+      end;
+  Exec(ExpandConstant('{sys}\schtasks.exe'), '/Delete /F /TN "Chengjiang IME Register Profile C4548683"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if not Registered then
+    RaiseException('无法为当前桌面用户登记个人版输入法，请确认中文语言设置和任务计划程序可用。');
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);begin

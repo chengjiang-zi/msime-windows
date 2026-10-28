@@ -1,3 +1,4 @@
+param([string]$PersonalInstaller = '', [string]$DevCertificate = '')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or
@@ -34,13 +35,7 @@ try {
     $launcher = Join-Path $build 'Release/personal-alternate-admin-launch.exe'
     $env:CHENGJIANG_TEST_USERNAME = $userName
     $env:CHENGJIANG_TEST_PASSWORD = $plainPassword
-    try {
-        & $launcher $probe '/VERYSILENT' '/SUPPRESSMSGBOXES' "/RESULT=$output" "/LOG=$log"
-    } finally {
-        Remove-Item Env:CHENGJIANG_TEST_USERNAME -ErrorAction SilentlyContinue
-        Remove-Item Env:CHENGJIANG_TEST_PASSWORD -ErrorAction SilentlyContinue
-        $plainPassword = $null
-    }
+    & $launcher $probe '/VERYSILENT' '/SUPPRESSMSGBOXES' "/RESULT=$output" "/LOG=$log"
     if (-not (Test-Path -LiteralPath $output -PathType Leaf)) {
         if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log | Select-Object -Last 30 | Write-Host }
         throw 'Alternate-admin identity probe produced no result.'
@@ -51,8 +46,17 @@ try {
         throw 'Alternate-admin probe did not distinguish the desktop user from the elevated account.'
     }
     Write-Host 'PASS: elevated alternate account identified the original desktop user and data directory.'
+    # The no-install Inno probe intentionally exits nonzero after writing its result.
+    $global:LASTEXITCODE = 0
+    if ($PersonalInstaller -or $DevCertificate) {
+        if (-not $PersonalInstaller -or -not $DevCertificate) { throw 'Both installer and certificate are required.' }
+        & (Join-Path $PSScriptRoot 'alternate-admin-install-ci.ps1') -PersonalInstaller $PersonalInstaller `
+            -DevCertificate $DevCertificate -Launcher $launcher -TestRoot $root -DesktopSid $lines[0]
+        if (-not $?) { throw 'Alternate-admin installation test failed.' }
+    }
 } finally {
     Remove-Item Env:CHENGJIANG_TEST_USERNAME -ErrorAction SilentlyContinue
     Remove-Item Env:CHENGJIANG_TEST_PASSWORD -ErrorAction SilentlyContinue
+    $plainPassword = $null
     if ($createdUser) { Remove-LocalUser -Name $userName }
 }
