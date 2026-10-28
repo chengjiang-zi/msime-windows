@@ -85,11 +85,13 @@ int wmain(int argc, wchar_t **argv) {
   startup.dwFlags = STARTF_USESHOWWINDOW;
   startup.wShowWindow = SW_HIDE;
   PROCESS_INFORMATION process{};
-  const BOOL started = CreateProcessWithTokenW(limited, 0, argv[1], command.data(), 0, nullptr, nullptr,
-                                                &startup, &process);
+  // A restricted version of the caller's primary token is eligible for
+  // CreateProcessAsUser without assigning an unrelated user's token.
+  const BOOL started = CreateProcessAsUserW(limited, argv[1], command.data(), nullptr, nullptr, FALSE,
+                                             0, nullptr, nullptr, &startup, &process);
   const DWORD error = GetLastError();
   CloseHandle(limited);
-  if (!started) { SetLastError(error); return Fail("CreateProcessWithTokenW"); }
+  if (!started) { SetLastError(error); return Fail("CreateProcessAsUserW"); }
   std::cout << "PASS: launched with a medium-integrity restricted token.\n";
   const DWORD wait = WaitForSingleObject(process.hProcess, 360000);
   DWORD result = 1;
