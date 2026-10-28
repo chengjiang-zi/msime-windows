@@ -11,6 +11,46 @@ end;
 function PersonalGetFileAttributes(const FileName: String): Cardinal;
   external 'GetFileAttributesW@kernel32.dll stdcall';
 
+function PersonalQueryDosDevice(const DeviceName, TargetPath: String;
+  MaxChars: Cardinal): Cardinal;
+  external 'QueryDosDeviceW@kernel32.dll stdcall';
+
+{ Only accept ordinary local volumes and long paths. SUBST, network mappings,
+  short DOS names and device paths can otherwise disguise an overlapping path. }
+function HasUnsafePathAlias(const Directory: String): Boolean;
+var
+  Target: String;
+begin
+  Result := True;
+  if (Length(Directory) < 3) or (Directory[2] <> ':') or
+     (Directory[3] <> '\') or (Pos('~', Directory) <> 0) then
+    exit;
+  SetLength(Target, 1024);
+  if PersonalQueryDosDevice(Copy(Directory, 1, 2), Target, Length(Target)) = 0 then
+    exit;
+  if CompareText(Copy(Target, 1, 22), '\Device\HarddiskVolume') <> 0 then
+    exit;
+  Result := False;
+end;
+
+{ Distinct drive letters can name the same volume; compare the underlying
+  device name as well as the path below that volume. }
+function VolumePath(const Directory: String): String;
+var
+  Target: String;
+  Size: Cardinal;
+  Terminator: Integer;
+begin
+  SetLength(Target, 1024);
+  Size := PersonalQueryDosDevice(Copy(Directory, 1, 2), Target, Length(Target));
+  if Size = 0 then
+    RaiseException('Cannot resolve data directory volume');
+  Terminator := Pos(#0, Target);
+  if Terminator > 0 then
+    SetLength(Target, Terminator - 1);
+  Result := Target + Copy(Directory, 3, Length(Directory));
+end;
+
 { A junction or symbolic-link ancestor can make unrelated-looking paths point
   to the same directory. Until we support resolving those aliases reliably,
   reject paths that pass through a reparse point rather than risking deletion. }
@@ -49,7 +89,7 @@ begin
   if Trim(Directory) = '' then
     exit;
   Candidate := RemoveBackslashUnlessRoot(ExpandFileName(Directory));
-  if HasReparsePointAncestor(Candidate) then
+  if HasUnsafePathAlias(Candidate) or HasReparsePointAncestor(Candidate) then
     exit;
   Upstream[0] := ExpandConstant('{localappdata}\metasequoiaime');
   Upstream[1] := '';
@@ -64,9 +104,10 @@ begin
     if Trim(Upstream[Index]) <> '' then
     begin
       Upstream[Index] := RemoveBackslashUnlessRoot(ExpandFileName(Upstream[Index]));
-      if HasReparsePointAncestor(Upstream[Index]) then
+      if HasUnsafePathAlias(Upstream[Index]) or HasReparsePointAncestor(Upstream[Index]) then
         exit;
-      if IsPathInside(Candidate, Upstream[Index]) or IsPathInside(Upstream[Index], Candidate) then
+      if IsPathInside(VolumePath(Candidate), VolumePath(Upstream[Index])) or
+         IsPathInside(VolumePath(Upstream[Index]), VolumePath(Candidate)) then
         exit;
     end;
   Result := False;

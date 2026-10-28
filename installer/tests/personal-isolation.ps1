@@ -14,6 +14,7 @@ if (-not $testRoot.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase))
     throw 'Probe root is outside the temporary directory.'
 }
 $junction = Join-Path $testRoot 'junction'
+$substitutedDrive = ''
 try {
     $probe = Join-Path $testRoot 'personal-isolation-probe.exe'
     & $IsccPath '/Qp' "/O$testRoot" (Join-Path $PSScriptRoot 'personal-isolation-probe.iss')
@@ -31,11 +32,26 @@ try {
         @{ Name = 'parent'; Path = $testRoot; Expect = 'blocked' },
         @{ Name = 'normalized'; Path = (Join-Path $personal '..\upstream\child'); Expect = 'blocked' },
         @{ Name = 'junction'; Path = (Join-Path $junction 'child'); Expect = 'blocked' },
+        @{ Name = 'short-name'; Path = (Join-Path $testRoot 'UPSTRE~1'); Expect = 'blocked' },
+        @{ Name = 'network'; Path = '\\example.invalid\share\data'; Expect = 'blocked' },
         @{ Name = 'upstream-default'; Path = (Join-Path $env:LOCALAPPDATA 'metasequoiaime'); Expect = 'blocked' },
         @{ Name = 'upstream-program'; Path = (Join-Path $env:ProgramFiles 'metasequoiaime\server'); Expect = 'blocked' },
         @{ Name = 'upstream-system'; Path = (Join-Path $env:SystemRoot 'System32\IME\MetasequoiaIME'); Expect = 'blocked' },
         @{ Name = 'independent'; Path = $personal; Expect = 'allowed' }
     )
+    # Never create drive mappings on the developer's machine.
+    if ($env:GITHUB_ACTIONS -eq 'true' -and $env:RUNNER_ENVIRONMENT -eq 'github-hosted') {
+        foreach ($letter in @('Z', 'Y', 'X', 'W')) {
+            if (-not (Test-Path "${letter}:\")) {
+                $substitutedDrive = "${letter}:"
+                break
+            }
+        }
+        if (-not $substitutedDrive) { throw 'No free drive letter for SUBST test.' }
+        & "$env:SystemRoot\System32\subst.exe" $substitutedDrive $upstream
+        if ($LASTEXITCODE -ne 0) { throw 'Could not create test SUBST mapping.' }
+        $cases += @{ Name = 'subst'; Path = "$substitutedDrive\child"; Expect = 'blocked' }
+    }
     foreach ($case in $cases) {
         $result = Join-Path $testRoot ($case.Name + '.txt')
         $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART',
@@ -52,6 +68,10 @@ try {
     }
 }
 finally {
+    if ($substitutedDrive) {
+        & "$env:SystemRoot\System32\subst.exe" $substitutedDrive /d
+        if ($LASTEXITCODE -ne 0) { throw 'Could not remove test SUBST mapping.' }
+    }
     # Remove the junction itself before recursively removing the verified test root.
     if (Test-Path -LiteralPath $junction) { Remove-Item -LiteralPath $junction -Force }
     if (Test-Path -LiteralPath $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force }
