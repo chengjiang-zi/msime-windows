@@ -23,6 +23,7 @@ $originalData = Join-Path $taskRoot 'upstream-data'
 $personalRoot = Join-Path $taskRoot 'personal-data'
 $personalData = Join-Path $personalRoot 'chengjiangime'
 $personalSentinel = Join-Path $personalRoot 'unrelated-user-file.txt'
+$programSentinel = Join-Path $env:ProgramFiles 'chengjiangime\server\unrelated-user-file.txt'
 $baselineInstaller = Join-Path $taskRoot 'upstream-setup.exe'
 $sentinel = Join-Path $originalData 'personal-isolation-sentinel.txt'
 $originalKey = 'HKLM:\Software\Metasequoia\MetasequoiaIME'
@@ -136,6 +137,8 @@ Assert-OriginalIntact $originalServer $originalProcess.Id
 # a child directory and leave its existing content intact after uninstall.
 New-Item -ItemType Directory -Path $personalRoot | Out-Null
 [IO.File]::WriteAllText($personalSentinel, 'unrelated user file')
+New-Item -ItemType Directory -Path (Split-Path -Parent $programSentinel) -Force | Out-Null
+[IO.File]::WriteAllText($programSentinel, 'unrelated program file')
 $code = Run-Installer $PersonalInstaller $personalRoot (Join-Path $taskRoot 'personal.log')
 if ($code -ne 0) { throw "Personal installation failed: $code" }
 $personalState = Get-ItemProperty -LiteralPath $personalKey
@@ -205,6 +208,9 @@ if ($uninstall.ExitCode -ne 0) { throw "Personal uninstall failed: $($uninstall.
 Assert-OriginalIntact $originalServer $originalProcess.Id
 if ([IO.File]::ReadAllText($personalSentinel) -ne 'unrelated user file') {
     throw 'Personal uninstall changed an unrelated file in the selected parent directory.'
+}
+if ([IO.File]::ReadAllText($programSentinel) -ne 'unrelated program file') {
+    throw 'Personal installation or uninstall changed an unrelated file in the program directory.'
 }
 if (Is-KeyboardListed $personalProfile) { throw 'Personal keyboard profile remained after uninstall.' }
 $remaining = Get-ItemProperty -LiteralPath $personalKey -ErrorAction SilentlyContinue

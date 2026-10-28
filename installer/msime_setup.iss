@@ -1757,8 +1757,8 @@ begin
   { 目标词库已安全移除，再清理旧的随包资源。用户配置和外部皮肤目录在这里保留。}
   CleanAppDataExceptUserFiles;
 #endif
-  TryDeleteTree(ExpandConstant(
-    '{commonpf64}\chengjiangime\server'));
+  { Do not recursively delete the program directory: it may contain files
+    placed there independently. Inno replaces the files shipped in this build. }
   TryDeleteOldVersionDirs(TsfRoot32);
   TryDeleteOldVersionDirs(TsfRoot64);
   { 旧版把 TSF DLL 装在 Program Files 下，升级上来时一并清掉。}
@@ -1856,13 +1856,13 @@ begin
   end
   else if CurUninstallStep = usPostUninstall then
   begin
-    TryDeleteTree(ExpandConstant(
-      '{commonpf64}\chengjiangime\server'));
-    { 还被宿主进程加载着的 DLL 删不掉，会留到重启后由用户或下次安装清理。}
-    TryDeleteTree(TsfRoot32);
-    TryDeleteTree(TsfRoot64);
-    TryDeleteTree(ExpandConstant('{commonpf32}\chengjiangime'));
-    TryDeleteTree(ExpandConstant('{commonpf64}\chengjiangime'));
+    { Inno removes its recorded files. Remove only empty directories here;
+      unknown files and DLLs still loaded by a host must be left alone. }
+    RemoveDir(ExpandConstant('{commonpf64}\chengjiangime\server'));
+    RemoveDir(TsfRoot32);
+    RemoveDir(TsfRoot64);
+    RemoveDir(ExpandConstant('{commonpf32}\chengjiangime'));
+    RemoveDir(ExpandConstant('{commonpf64}\chengjiangime'));
     { 数据目录可能被用户指到了别的盘，甚至指到一个本来就有文件的文件夹（#537）。}
     RemoveDataDir(ResolvePreviousDataDir);
     { 删除空目录时不会触碰其余文件。个人版没有需要清理的旧版 WebView 数据。}
