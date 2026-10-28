@@ -62,7 +62,7 @@ int wmain(int argc, wchar_t **argv) {
   HANDLE token = nullptr;
   const BOOL loggedOn =
       LogonUserW(user.c_str(), L".", password.c_str(),
-                 LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, &token);
+                 LOGON32_LOGON_BATCH, LOGON32_PROVIDER_DEFAULT, &token);
   SecureZeroMemory(password.data(), password.size() * sizeof(wchar_t));
   if (!loggedOn)
     return Fail("LogonUserW");
