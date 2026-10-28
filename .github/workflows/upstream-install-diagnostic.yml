@@ -84,9 +84,24 @@ jobs:
           & "$env:SystemRoot/System32/icacls.exe" $smokeBuild /grant "*$($desktopSid):(OI)(CI)RX" /T /C
           if ($LASTEXITCODE -ne 0) { throw 'Could not grant the desktop SID access to the test binary.' }
           Get-Process -Name ChengjiangImeWatchdog, ChengjiangImeServer -ErrorAction SilentlyContinue | Stop-Process -Force
+          $state = Get-ItemProperty -LiteralPath 'HKLM:\Software\Chengjiang\PersonalIME'
+          $configPath = Join-Path $state.DataDir 'config.toml'
+          $config = [IO.File]::ReadAllText($configPath)
+          foreach ($setting in @{'candidate_translations'='true'; 'candidate_window_fit_content'='false';
+                                  'candidate_window_follow_cursor'='false'; 'cloud_candidates'='false'}) {
+            foreach ($entry in $setting.GetEnumerator()) {
+              $pattern = '(?m)^[ \t]*' + [regex]::Escape($entry.Key) + '[ \t]*=[ \t]*[^\r\n#]*'
+              if (-not [regex]::IsMatch($config, $pattern)) { throw "Missing setting: $($entry.Key)" }
+              $config = [regex]::Replace($config, $pattern, "$($entry.Key) = $($entry.Value)")
+            }
+          }
+          [IO.File]::WriteAllText($configPath, $config, [Text.UTF8Encoding]::new($false))
+          $launcher = "$build/Release/personal-limited-token-launch.exe"
+          & $launcher --detach (Join-Path $env:RUNNER_TEMP 'limited-server.log') $state.ServerPath --watchdog-managed
+          if ($LASTEXITCODE -ne 0) { throw 'Restricted server process could not be started.' }
+          Start-Sleep -Seconds 3
           $log = Join-Path $env:RUNNER_TEMP 'limited-input.log'
-          & "$build/Release/personal-limited-token-launch.exe" (Get-Command pwsh).Source -NoProfile -File `
-            (Join-Path $env:GITHUB_WORKSPACE 'installer/tests/limited-token-smoke.ps1') -DesktopResult $desktop -LogPath $log
+          & $launcher --wait $log (Join-Path $smokeBuild 'Release/personal-tsf-interactive-smoke.exe')
           $result = $LASTEXITCODE
           if (Test-Path $log) { Get-Content $log | Write-Host }
           Assert-NotTrusted

@@ -1,7 +1,6 @@
 param(
     [Parameter(Mandatory)][string]$DesktopResult,
-    [switch]$ProbeMouseCaret,
-    [switch]$UseExistingBuild
+    [switch]$ProbeMouseCaret
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -24,15 +23,10 @@ $configPath = Join-Path $state.DataDir 'config.toml'
 $config = [IO.File]::ReadAllText($configPath)
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $build = Join-Path $env:RUNNER_TEMP 'personal-tsf-interactive-smoke'
-if (-not $UseExistingBuild) {
-    cmake -S (Join-Path $repoRoot 'tests/tsf-interactive-smoke') -B $build -A x64
-    if ($LASTEXITCODE -ne 0) { throw 'TSF smoke configuration failed.' }
-    cmake --build $build --config Release --parallel
-    if ($LASTEXITCODE -ne 0) { throw 'TSF smoke build failed.' }
-}
-if (-not (Test-Path -LiteralPath (Join-Path $build 'Release/personal-tsf-interactive-smoke.exe') -PathType Leaf)) {
-    throw 'TSF smoke executable is missing.'
-}
+cmake -S (Join-Path $repoRoot 'tests/tsf-interactive-smoke') -B $build -A x64
+if ($LASTEXITCODE -ne 0) { throw 'TSF smoke configuration failed.' }
+cmake --build $build --config Release --parallel
+if ($LASTEXITCODE -ne 0) { throw 'TSF smoke build failed.' }
 $scenarios = @(
     @{ Name = 'vertical'; Layout = 'vertical'; PageSize = 6 }
     @{ Name = 'horizontal-3'; Layout = 'horizontal'; PageSize = 3 }

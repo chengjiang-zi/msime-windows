@@ -20,7 +20,9 @@ bool HostedRunner() {
 // CI-only: same desktop SID, but deny Administrators and lower the integrity
 // level. This approximates a limited token; it is not a separate standard user.
 int wmain(int argc, wchar_t **argv) {
-  if (!HostedRunner() || argc < 2) return 1;
+  if (!HostedRunner() || argc < 4) return 1;
+  const bool detach = std::wstring(argv[1]) == L"--detach";
+  if (!detach && std::wstring(argv[1]) != L"--wait") return 1;
   HANDLE source = nullptr;
   if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY |
                         TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_PRIVILEGES, &source))
@@ -75,7 +77,7 @@ int wmain(int argc, wchar_t **argv) {
   std::cout << "Restricted token: medium integrity, administrator group disabled, elevation flag="
             << elevation.TokenIsElevated << ".\n";
   std::wstring command;
-  for (int index = 1; index < argc; ++index) {
+  for (int index = 3; index < argc; ++index) {
     const std::wstring value = argv[index];
     if (value.find(L'"') != std::wstring::npos || (!value.empty() && value.back() == L'\\')) return 1;
     if (!command.empty()) command += L' ';
@@ -86,19 +88,32 @@ int wmain(int argc, wchar_t **argv) {
   HANDLE nullStream = CreateFileW(L"NUL", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                   &attributes, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
   if (nullStream == INVALID_HANDLE_VALUE) return Fail("Open standard stream");
+  HANDLE output = CreateFileW(argv[2], GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                              &attributes, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (output == INVALID_HANDLE_VALUE) return Fail("Open output log");
   startup.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
   startup.wShowWindow = SW_HIDE;
-  startup.hStdInput = startup.hStdOutput = startup.hStdError = nullStream;
+  startup.hStdInput = nullStream;
+  startup.hStdOutput = startup.hStdError = output;
   PROCESS_INFORMATION process{};
+  const std::wstring program = argv[3];
+  const auto separator = program.find_last_of(L"\\/");
+  const std::wstring directory = separator == std::wstring::npos ? L"" : program.substr(0, separator);
   // A restricted version of the caller's primary token is eligible for
   // CreateProcessAsUser without assigning an unrelated user's token.
-  const BOOL started = CreateProcessAsUserW(limited, argv[1], command.data(), nullptr, nullptr, TRUE,
-                                             0, nullptr, nullptr, &startup, &process);
+  const BOOL started = CreateProcessAsUserW(limited, argv[3], command.data(), nullptr, nullptr, TRUE,
+                                             0, nullptr, directory.empty() ? nullptr : directory.c_str(), &startup, &process);
   const DWORD error = GetLastError();
   CloseHandle(nullStream);
+  CloseHandle(output);
   CloseHandle(limited);
   if (!started) { SetLastError(error); return Fail("CreateProcessAsUserW"); }
   std::cout << "PASS: launched with a medium-integrity restricted token.\n";
+  if (detach) {
+    CloseHandle(process.hThread);
+    CloseHandle(process.hProcess);
+    return 0;
+  }
   const DWORD wait = WaitForSingleObject(process.hProcess, 360000);
   DWORD result = 1;
   if (wait == WAIT_OBJECT_0) GetExitCodeProcess(process.hProcess, &result);
