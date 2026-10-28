@@ -41,13 +41,18 @@ bool SendKey(WORD key) {
 }
 
 // Capture only the disposable test candidate window for visual review.
-bool CaptureCandidate(HWND window, const wchar_t *name) {
+bool CaptureCandidate(HWND window, HWND background, const wchar_t *name) {
   wchar_t directory[MAX_PATH]{};
   if (!GetEnvironmentVariableW(L"CHENGJIANG_SMOKE_SCREENSHOT_DIR", directory,
                                MAX_PATH))
     return false;
   RECT bounds{};
-  if (!GetWindowRect(window, &bounds))
+  RECT safeBounds{};
+  if (!GetWindowRect(window, &bounds) ||
+      !GetWindowRect(background, &safeBounds) ||
+      GetForegroundWindow() != GetAncestor(background, GA_ROOT) ||
+      bounds.left < safeBounds.left || bounds.top < safeBounds.top ||
+      bounds.right > safeBounds.right || bounds.bottom > safeBounds.bottom)
     return false;
   const int width = bounds.right - bounds.left;
   const int height = bounds.bottom - bounds.top;
@@ -123,6 +128,15 @@ int main() {
     std::cerr << "Could not create the disposable test window.\n";
     return 1;
   }
+  ShowWindow(window, SW_MAXIMIZE);
+  RECT client{};
+  if (!GetClientRect(window, &client) ||
+      !MoveWindow(edit, 10, 10, client.right - 20, client.bottom - 20, TRUE)) {
+    std::cerr << "Could not size the disposable test background.\n";
+    DestroyWindow(window);
+    CoUninitialize();
+    return 1;
+  }
   SetForegroundWindow(window);
   SetFocus(edit);
   PumpFor(1000);
@@ -183,7 +197,7 @@ int main() {
     CoUninitialize();
     return 1;
   }
-  if (!CaptureCandidate(candidate, L"candidate-before"))
+  if (!CaptureCandidate(candidate, edit, L"candidate-before"))
     std::cerr << "Could not capture the candidate before backspace.\n";
   if (!SendKey(VK_BACK)) {
     std::cerr << "Could not inject the backspace key.\n";
@@ -200,7 +214,7 @@ int main() {
     CoUninitialize();
     return 1;
   }
-  if (!CaptureCandidate(candidate, L"candidate-after"))
+  if (!CaptureCandidate(candidate, edit, L"candidate-after"))
     std::cerr << "Could not capture the candidate after backspace.\n";
   std::cout << "Candidate bounds before backspace: " << before.left << ','
             << before.top << ' ' << before.right - before.left << 'x'
