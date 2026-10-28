@@ -41,6 +41,10 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+      - '.github/workflows/upstream-install-diagnostic.yml'
+      - 'installer/tests/alternate-admin-ci.ps1'
+      - 'installer/tests/uninstall-abort-*'
+      - 'tests/alternate-admin-launch/**'
   pull_request:
     branches:
       - develop
