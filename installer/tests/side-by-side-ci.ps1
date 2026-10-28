@@ -213,6 +213,19 @@ if ([IO.File]::ReadAllText($programSentinel) -ne 'unrelated program file') {
     throw 'Personal installation or uninstall changed an unrelated file in the program directory.'
 }
 if (Is-KeyboardListed $personalProfile) { throw 'Personal keyboard profile remained after uninstall.' }
+foreach ($view in @([Microsoft.Win32.RegistryView]::Registry64, [Microsoft.Win32.RegistryView]::Registry32)) {
+    $base = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, $view)
+    try {
+        $key = $base.OpenSubKey("Software\Classes\CLSID\$personalClsid\InprocServer32")
+        if ($key) {
+            $key.Dispose()
+            throw "Personal COM registration remained after uninstall in $view."
+        }
+    } finally { $base.Dispose() }
+}
+if (Get-Process -Name 'ChengjiangImeServer' -ErrorAction SilentlyContinue) {
+    throw 'Personal Server remained running after uninstall.'
+}
 $remaining = Get-ItemProperty -LiteralPath $personalKey -ErrorAction SilentlyContinue
 if ($remaining) {
     foreach ($name in @('DataDir', 'ServerPath', 'VersionDir', 'GameCompatProfileName')) {
