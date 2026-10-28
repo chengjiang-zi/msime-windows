@@ -52,7 +52,8 @@ try {
     Remove-Item -LiteralPath $probeResult -Force
     $credential = [Management.Automation.PSCredential]::new($account, $password)
     $process = Start-Process -FilePath $probeExe -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES',
-        "/RESULT=`"$probeResult`"", "/LOG=`"$probeLog`"") -Credential $credential -LoadUserProfile -WindowStyle Hidden -PassThru
+        "/RESULT=`"$probeResult`"", "/LOG=`"$probeLog`"") -Credential $credential -LoadUserProfile `
+        -WorkingDirectory $probeRoot -WindowStyle Hidden -PassThru
     if (-not $process.WaitForExit(60000)) {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         throw 'Different-account shell-user probe timed out.'
