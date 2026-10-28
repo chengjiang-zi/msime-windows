@@ -92,7 +92,7 @@ int wmain(int argc, wchar_t **argv) {
     return 1;
   }
   HANDLE primary = nullptr;
-  if (!DuplicateTokenEx(token, MAXIMUM_ALLOWED, nullptr, SecurityImpersonation,
+  if (!DuplicateTokenEx(token, MAXIMUM_ALLOWED, nullptr, SecurityIdentification,
                         TokenPrimary, &primary)) {
     const DWORD error = GetLastError();
     CloseHandle(token);
