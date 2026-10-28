@@ -11,10 +11,10 @@ namespace
 
 // 系统用来标识 TSF 输入法的「语言:{CLSID}{Profile GUID}」串。
 // 与 windows/src/Global/Globals.cpp 的 MetasequoiaIMECLSID、MetasequoiaIMEGuidProfile 保持一致。
-constexpr wchar_t kProfileId[] = L"0804:{E3062E9A-D834-4637-8958-ED8CFA427D01}{4D59B1B4-D503-44AE-9259-BAD9BB2778AB}";
+constexpr wchar_t kProfileId[] = L"0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}";
 // 水杉的 TSF 语言配置在系统里的注册位置，用来区分「没注册」和「没装中文语言」。
-constexpr wchar_t kTipProfileKey[] = L"SOFTWARE\\Microsoft\\CTF\\TIP\\{E3062E9A-D834-4637-8958-ED8CFA427D01}"
-                                     L"\\LanguageProfile\\0x00000804\\{4D59B1B4-D503-44AE-9259-BAD9BB2778AB}";
+constexpr wchar_t kTipProfileKey[] = L"SOFTWARE\\Microsoft\\CTF\\TIP\\{56A47253-A7C1-53AC-9028-7297207BD972}"
+                                     L"\\LanguageProfile\\0x00000804\\{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}";
 
 constexpr wchar_t kUserProfileKey[] = L"Control Panel\\International\\User Profile";
 

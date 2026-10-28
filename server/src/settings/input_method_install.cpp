@@ -8,7 +8,7 @@ namespace
 {
 
 // Same CLSID and profile GUID as windows/src/Global/Globals.cpp and default_input_method.cpp.
-constexpr wchar_t kProfileId[] = L"0804:{e3062e9a-d834-4637-8958-ed8cfa427d01}{4d59b1b4-d503-44ae-9259-bad9bb2778ab}";
+constexpr wchar_t kProfileId[] = L"0804:{56a47253-a7c1-53ac-9028-7297207bd972}{1cac6601-4479-55c1-bca3-2b46b9afd375}";
 constexpr wchar_t kUserProfileKey[] = L"Control Panel\\International\\User Profile";
 constexpr wchar_t kLanguage[] = L"zh-Hans-CN";
 // Used by the installer, which starts the settings program as the original user with this switch.

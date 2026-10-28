@@ -21,8 +21,8 @@ constexpr wchar_t kRecordValue[] = L"GameCompatProfileName";
 // GetLanguageProfileDescription and the language bar read Display Description if the key has one and Description
 // otherwise. What those views actually show is the keyboard list entry the user has, which is why the profile has to
 // be installed there (input_method_install.h) for a rename to be visible at all.
-constexpr wchar_t kTipProfileKey[] = L"SOFTWARE\\Microsoft\\CTF\\TIP\\{E3062E9A-D834-4637-8958-ED8CFA427D01}"
-                                     L"\\LanguageProfile\\0x00000804\\{4D59B1B4-D503-44AE-9259-BAD9BB2778AB}";
+constexpr wchar_t kTipProfileKey[] = L"SOFTWARE\\Microsoft\\CTF\\TIP\\{56A47253-A7C1-53AC-9028-7297207BD972}"
+                                     L"\\LanguageProfile\\0x00000804\\{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}";
 // TEXTSERVICE_DESC in windows/src/Register/Register.cpp: what the profile is called with the switch off.
 constexpr wchar_t kProductName[] = L"Metasequoia 水杉输入法";
 

@@ -1832,7 +1832,7 @@ begin
   if RegQueryStringValue(HKCU, 'Control Panel\International\User Profile',
     'InputMethodOverride', OverrideId) and
     (CompareText(OverrideId,
-      '0804:{E3062E9A-D834-4637-8958-ED8CFA427D01}{4D59B1B4-D503-44AE-9259-BAD9BB2778AB}') = 0) then
+      '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}') = 0) then
     RegDeleteValue(HKCU, 'Control Panel\International\User Profile',
       'InputMethodOverride');
 end;
