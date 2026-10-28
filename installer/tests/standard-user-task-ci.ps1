@@ -51,10 +51,10 @@ try {
     if (-not $registered) { throw 'Direct scheduler COM registration returned no task.' }
     Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
     Write-Host 'PASS: scheduler COM accepts the standard user SID.'
-    $registered = $folder.RegisterTask($taskName, $definition.XmlText, 6, $user.SID.Value, '', 3)
+    $registered = $folder.RegisterTask($taskName, $definition.XmlText, 6, $user.SID.Value, $null, 3, $null)
     if (-not $registered) { throw 'Scheduler XML registration returned no task.' }
     Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-    Write-Host 'PASS: scheduler accepts XML and an empty password.'
+    Write-Host 'PASS: scheduler accepts XML with no stored password.'
 
     $compiler = (Get-Command ISCC.exe -CommandType Application -ErrorAction Stop).Source
     $build = Join-Path $env:RUNNER_TEMP $taskName
