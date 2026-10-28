@@ -246,11 +246,13 @@ int main(int argc, char **argv) {
                    argument != "--horizontal-navigation=9" &&
                    argument != "--mouse-caret-diagnostic" &&
                    argument != "--mouse-caret-richedit" &&
-                   argument != "--mouse-caret-region")) {
+                   argument != "--mouse-caret-region" &&
+                   argument != "--mouse-caret-region-keep")) {
     std::cerr << "Unexpected interactive smoke-test arguments.\n";
     return 1;
   }
-  const bool testRegion = argument == "--mouse-caret-region";
+  const bool keepRegion = argument == "--mouse-caret-region-keep";
+  const bool testRegion = argument == "--mouse-caret-region" || keepRegion;
   const bool richEdit = argument == "--mouse-caret-richedit" || testRegion;
   const bool testMouseCaret = argument == "--mouse-caret-diagnostic" || richEdit;
   const bool testHorizontalNavigation = argc == 2 && !testMouseCaret;
@@ -606,7 +608,7 @@ int main(int argc, char **argv) {
       // The pass-through experiment must not make actual candidate rows
       // unclickable. Use the default vertical skin in the disposable desktop.
       mouseTracker.Detach();
-      if (region.applied && IsWindow(region.window)) {
+      if (!keepRegion && region.applied && IsWindow(region.window)) {
         SetWindowRgn(region.window, nullptr, TRUE);
         region.applied = false;
       }

@@ -36,6 +36,7 @@ $scenarios = @(
 if ($ProbeMouseCaret) {
     $scenarios += @{ Name = 'mouse-caret'; Layout = 'vertical'; PageSize = 6 }
     $scenarios += @{ Name = 'mouse-caret-richedit'; Layout = 'vertical'; PageSize = 6 }
+    $scenarios += @{ Name = 'mouse-caret-region-keep'; Layout = 'vertical'; PageSize = 6 }
     $scenarios += @{ Name = 'mouse-caret-region'; Layout = 'vertical'; PageSize = 6 }
 }
 foreach ($scenario in $scenarios) {
@@ -76,7 +77,8 @@ foreach ($scenario in $scenarios) {
     $arguments = @(if ($layout -eq 'horizontal') { "--horizontal-navigation=$pageSize" }
         elseif ($scenario.Name -eq 'mouse-caret') { '--mouse-caret-diagnostic' }
         elseif ($scenario.Name -eq 'mouse-caret-richedit') { '--mouse-caret-richedit' }
-        elseif ($scenario.Name -eq 'mouse-caret-region') { '--mouse-caret-region' })
+        elseif ($scenario.Name -eq 'mouse-caret-region') { '--mouse-caret-region' }
+        elseif ($scenario.Name -eq 'mouse-caret-region-keep') { '--mouse-caret-region-keep' })
     & (Join-Path $build 'Release/personal-tsf-interactive-smoke.exe') @arguments |
         Tee-Object -Variable smokeLines | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -eq 77) {
