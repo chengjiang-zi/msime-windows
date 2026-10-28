@@ -9,6 +9,9 @@ Uninstallable=no
 OutputBaseFilename=watchdog-task-probe
 Compression=none
 
+[Files]
+Source: "../register-personal-watchdog.ps1"; Flags: dontcopy
+
 [Code]
 #include "../personal_watchdog_task.iss"
 
