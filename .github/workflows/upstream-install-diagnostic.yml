@@ -43,6 +43,9 @@ jobs:
       - name: Check standard-user task registration
         shell: pwsh
         run: ./installer/tests/standard-user-task-ci.ps1
+      - name: Verify post-install status reporting
+        shell: pwsh
+        run: ./installer/tests/postinstall-status-ci.ps1
   inspect:
     runs-on: windows-2025
     timeout-minutes: 15
