@@ -11,6 +11,13 @@
 #include <vector>
 
 namespace {
+WNDPROC originalEditProc = nullptr;
+LRESULT CALLBACK TraceEditMouse(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
+  if (message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_CAPTURECHANGED) {
+    std::cout << "MOUSE_HOST_MESSAGE: " << message << " captured=" << (GetCapture() == hwnd) << "\n";
+  }
+  return CallWindowProcW(originalEditProc, hwnd, message, wparam, lparam);
+}
 constexpr CLSID kPersonalClsid = {
     0x56a47253,
     0xa7c1,
@@ -289,6 +296,16 @@ int main(int argc, char **argv) {
   if (!window || !edit) {
     std::cerr << "Could not create the disposable test window.\n";
     return 1;
+  }
+  if (richEdit) {
+    originalEditProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(edit, GWLP_WNDPROC,
+                                      reinterpret_cast<LONG_PTR>(&TraceEditMouse)));
+    if (!originalEditProc) {
+      std::cerr << "Could not trace the disposable Rich Edit window.\n";
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
   }
   ShowWindow(window, SW_MAXIMIZE);
   RECT client{};

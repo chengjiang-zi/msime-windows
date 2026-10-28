@@ -10,7 +10,7 @@
 - 后续实验发现，测试编辑框保留鼠标捕获时，候选点击会被送回编辑框；仅在测试程序中释放捕获后，裁剪区域保留与重置两种情况下，候选点击均可上屏。见[捕获诊断](https://github.com/chengjiang-zi/msime-windows/actions/runs/40763518788)。这不代表输入法可以跨进程直接释放宿主的鼠标捕获。
 - 另一实验让 TSF 监听器消费按下和松开事件，但在后续检查时编辑框仍持有捕获，实验未通过。见[事件消费实验](https://github.com/chengjiang-zi/msime-windows/actions/runs/40764231017)。还需要检查点击前、按下后、松开后的状态，确定捕获究竟何时产生。
 - 分阶段点击显示编辑框在按下后获取捕获、松开后仍保持。带 `HTTRANSPARENT` 的跨进程实验也仍由候选窗口命中，点击没有到达编辑框；不能将其作为透明穿透方案。见[分阶段点击实验](https://github.com/chengjiang-zi/msime-windows/actions/runs/40765272388)。
-- 只消费按下事件、放行松开事件也没有解除捕获，见[对照实验](https://github.com/chengjiang-zi/msime-windows/actions/runs/40765880658)。下一步需比较该测试控件在没有组合文字时的普通点击，排除测试环境自身的影响。
+- 只消费按下事件、放行松开事件也没有解除捕获，见[对照实验](https://github.com/chengjiang-zi/msime-windows/actions/runs/40765880658)。同一控件点击已上屏文字时，捕获在松开后正常释放；点击组合文字时则仍然保留，见[普通点击对照](https://github.com/chengjiang-zi/msime-windows/actions/runs/40766507453)。这只说明该控件在此测试场景的行为，不能推广到所有宿主。
 
 ## 需要解决的问题
 
