@@ -43,6 +43,8 @@ cmake -S (Join-Path $repoRoot 'tests/tsf-interactive-smoke') -B $build -A x64
 if ($LASTEXITCODE -ne 0) { throw 'TSF smoke configuration failed.' }
 cmake --build $build --config Release --parallel
 if ($LASTEXITCODE -ne 0) { throw 'TSF smoke build failed.' }
+$env:CHENGJIANG_SMOKE_SCREENSHOT_DIR = Join-Path $env:RUNNER_TEMP 'personal-tsf-screenshots'
+New-Item -ItemType Directory -Path $env:CHENGJIANG_SMOKE_SCREENSHOT_DIR -Force | Out-Null
 & (Join-Path $build 'Release/personal-tsf-interactive-smoke.exe')
 if ($LASTEXITCODE -eq 77) {
     Write-Host 'SKIP: focus was unavailable; no real-input test was performed.'

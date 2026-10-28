@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 constexpr CLSID kPersonalClsid = {
@@ -37,6 +38,73 @@ bool SendKey(WORD key) {
   input[1] = input[0];
   input[1].ki.dwFlags = KEYEVENTF_KEYUP;
   return SendInput(2, input, sizeof(INPUT)) == 2;
+}
+
+// Capture only the disposable test candidate window for visual review.
+bool CaptureCandidate(HWND window, const wchar_t *name) {
+  wchar_t directory[MAX_PATH]{};
+  if (!GetEnvironmentVariableW(L"CHENGJIANG_SMOKE_SCREENSHOT_DIR", directory,
+                               MAX_PATH))
+    return false;
+  RECT bounds{};
+  if (!GetWindowRect(window, &bounds))
+    return false;
+  const int width = bounds.right - bounds.left;
+  const int height = bounds.bottom - bounds.top;
+  if (width <= 0 || height <= 0 || width > 4096 || height > 4096)
+    return false;
+  HDC screen = GetDC(nullptr);
+  HDC memory = screen ? CreateCompatibleDC(screen) : nullptr;
+  HBITMAP bitmap =
+      memory ? CreateCompatibleBitmap(screen, width, height) : nullptr;
+  if (!bitmap) {
+    if (memory)
+      DeleteDC(memory);
+    if (screen)
+      ReleaseDC(nullptr, screen);
+    return false;
+  }
+  HGDIOBJ old = SelectObject(memory, bitmap);
+  const BOOL copied = BitBlt(memory, 0, 0, width, height, screen, bounds.left,
+                             bounds.top, SRCCOPY | CAPTUREBLT);
+  SelectObject(memory, old);
+  BITMAPINFO info{};
+  info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+  info.bmiHeader.biWidth = width;
+  info.bmiHeader.biHeight = -height;
+  info.bmiHeader.biPlanes = 1;
+  info.bmiHeader.biBitCount = 32;
+  info.bmiHeader.biCompression = BI_RGB;
+  const DWORD bytes = static_cast<DWORD>(width * height * 4);
+  std::vector<unsigned char> pixels(bytes);
+  const bool read =
+      copied && GetDIBits(memory, bitmap, 0, height, pixels.data(), &info,
+                          DIB_RGB_COLORS) == height;
+  DeleteObject(bitmap);
+  DeleteDC(memory);
+  ReleaseDC(nullptr, screen);
+  if (!read)
+    return false;
+  const std::wstring path = std::wstring(directory) + L"\\" + name + L".bmp";
+  HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr,
+                            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (file == INVALID_HANDLE_VALUE)
+    return false;
+  BITMAPFILEHEADER header{};
+  header.bfType = 0x4d42;
+  header.bfOffBits = sizeof(header) + sizeof(info.bmiHeader);
+  header.bfSize = header.bfOffBits + bytes;
+  DWORD written = 0;
+  bool ok = WriteFile(file, &header, sizeof(header), &written, nullptr) &&
+            written == sizeof(header);
+  ok = ok &&
+       WriteFile(file, &info.bmiHeader, sizeof(info.bmiHeader), &written,
+                 nullptr) &&
+       written == sizeof(info.bmiHeader);
+  ok = ok && WriteFile(file, pixels.data(), bytes, &written, nullptr) &&
+       written == bytes;
+  CloseHandle(file);
+  return ok;
 }
 } // namespace
 
@@ -115,6 +183,8 @@ int main() {
     CoUninitialize();
     return 1;
   }
+  if (!CaptureCandidate(candidate, L"candidate-before"))
+    std::cerr << "Could not capture the candidate before backspace.\n";
   if (!SendKey(VK_BACK)) {
     std::cerr << "Could not inject the backspace key.\n";
     DestroyWindow(window);
@@ -130,6 +200,8 @@ int main() {
     CoUninitialize();
     return 1;
   }
+  if (!CaptureCandidate(candidate, L"candidate-after"))
+    std::cerr << "Could not capture the candidate after backspace.\n";
   std::cout << "Candidate bounds before backspace: " << before.left << ','
             << before.top << ' ' << before.right - before.left << 'x'
             << before.bottom - before.top << "; after: " << after.left << ','

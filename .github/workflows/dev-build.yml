@@ -359,6 +359,14 @@ jobs:
       - name: Test personal input in a focused desktop control
         shell: pwsh
         run: ./installer/tests/tsf-interactive-smoke.ps1 -DesktopResult "${{ runner.temp }}/desktop-probe.txt"
+      - name: Upload disposable candidate screenshots
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: personal-candidate-test-screenshots
+          retention-days: 7
+          path: ${{ runner.temp }}/personal-tsf-screenshots/*.bmp
+          if-no-files-found: ignore
       - name: Name the artifact and record its checksum
         id: asset
         shell: pwsh
