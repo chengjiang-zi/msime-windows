@@ -14,7 +14,7 @@ int main()
     if (NearestRawCaret(expanded, 4, 6, 0, 3) != 2 || NearestRawCaret(expanded, 4, 6, 4, 3) != 3)
         return 2;
     // A committed prefix is not part of the editable raw input.
-    if (NearestRawCaret({2, 3, 4}, 2, 4, 2, 0) != 0)
+    if (NearestRawCaret({2, 3, 4}, 2, 4, 2, 0) || NearestRawCaret({2, 3, 4}, 2, 4, 2, 2) != 0)
         return 3;
     // A hidden separator gives two raw edges at the same displayed position.
     if (NearestRawCaret({0, 1, 1, 2}, 3, 2, 2, 1) != 2 || NearestRawCaret({0, 1, 1, 2}, 3, 2, 0, 1) != 1)

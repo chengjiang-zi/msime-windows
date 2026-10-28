@@ -71,6 +71,10 @@ inline std::optional<std::size_t> NearestRawCaret(const std::vector<std::size_t>
         if (rawToDisplay[i] > displayLength || (i > 0 && rawToDisplay[i] < rawToDisplay[i - 1]))
             return std::nullopt;
 
+    // Previously selected text belongs to the prefix, not the editable raw
+    // spelling. Leave its clicks to the host instead of silently moving them.
+    if (displayEdge < rawToDisplay.front())
+        return std::nullopt;
     displayEdge = (std::min)(displayEdge, displayLength);
     auto distance = [](std::size_t a, std::size_t b) { return a >= b ? a - b : b - a; };
     std::size_t best = 0;
