@@ -6,6 +6,7 @@
 #include "MetasequoiaIMEBaseStructure.h"
 #include "Compartment.h"
 #include "define.h"
+#include <optional>
 #include <vector>
 
 class CCompositionProcessorEngine
@@ -86,6 +87,9 @@ class CCompositionProcessorEngine
     // 按键缓冲长度对不上时按字母个数映射。
     void SetRenderedPreedit(std::wstring preedit, size_t prefixLength, std::vector<size_t> caretMap = {});
     DWORD_PTR GetRenderedCaretPosition() const;
+    // Experimental helper only: resolve a displayed UTF-16 edge to a raw key
+    // edge without guessing when the displayed text cannot be mapped safely.
+    std::optional<std::size_t> RawCaretForDisplayedEdge(std::size_t displayEdge) const;
 
     DWORD_PTR GetVirtualKeyLength()
     {

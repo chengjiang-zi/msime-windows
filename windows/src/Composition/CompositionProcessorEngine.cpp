@@ -1,6 +1,7 @@
 #include "Private.h"
 #include "MetasequoiaIME.h"
 #include "CompositionProcessorEngine.h"
+#include "MouseCaretPolicy.h"
 #include "TfInputProcessorProfile.h"
 #include "Globals.h"
 #include "FanyDefines.h"
@@ -428,6 +429,21 @@ DWORD_PTR CCompositionProcessorEngine::GetRenderedCaretPosition() const
         }
     }
     return displayPosition;
+}
+
+std::optional<std::size_t> CCompositionProcessorEngine::RawCaretForDisplayedEdge(std::size_t displayEdge) const
+{
+    const std::size_t rawLength = _keystrokeBuffer.GetLength();
+    if (displayEdge > _renderedPreedit.size() || (rawLength != 0 && !_keystrokeBuffer.Get()))
+        return std::nullopt;
+    if (!_renderedPreeditCaretMap.empty())
+        return FanyImeMouseCaret::NearestRawCaret(_renderedPreeditCaretMap, rawLength, _renderedPreedit.size(),
+                                                  _caretPosition, displayEdge);
+    const std::wstring raw = rawLength ? std::wstring(_keystrokeBuffer.Get(), rawLength) : std::wstring{};
+    const auto literalMap = FanyImeMouseCaret::BuildLiteralMap(raw, _renderedPreedit, _renderedPreeditPrefixLength);
+    return literalMap ? FanyImeMouseCaret::NearestRawCaret(*literalMap, rawLength, _renderedPreedit.size(),
+                                                           _caretPosition, displayEdge)
+                      : std::nullopt;
 }
 
 //+---------------------------------------------------------------------------
