@@ -8,6 +8,8 @@ on:
     paths:
       - .github/workflows/upstream-install-diagnostic.yml
       - installer/tests/standard-user-task-ci.ps1
+      - installer/personal_watchdog_task.iss
+      - installer/interactive_user.iss
 
 permissions:
   contents: read
