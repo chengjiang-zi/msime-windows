@@ -608,6 +608,10 @@ int main(int argc, char **argv) {
       // The pass-through experiment must not make actual candidate rows
       // unclickable. Use the default vertical skin in the disposable desktop.
       mouseTracker.Detach();
+      const bool hadEditCapture = GetCapture() == edit;
+      if (hadEditCapture)
+        ReleaseCapture();
+      std::cout << "CANDIDATE_CAPTURE_RELEASED_FOR_DIAGNOSTIC: " << hadEditCapture << "\n";
       if (!keepRegion && region.applied && IsWindow(region.window)) {
         SetWindowRgn(region.window, nullptr, TRUE);
         region.applied = false;
