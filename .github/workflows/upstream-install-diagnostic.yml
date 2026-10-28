@@ -108,7 +108,7 @@ jobs:
             $launcher = Join-Path $build 'Release/personal-standard-desktop-launch.exe'
             $env:CHENGJIANG_TEST_TIMEOUT_MS = '30000'
             Write-Host 'STAGE: start a system command as the standard user.'
-            & $launcher "$env:SystemRoot/System32/cmd.exe" /c exit 0
+            & $launcher "$env:SystemRoot/System32/whoami.exe"
             if ($LASTEXITCODE -ne 0) { throw 'Standard-user system command did not complete.' }
             Remove-Item Env:CHENGJIANG_TEST_TIMEOUT_MS
             $log = Join-Path $probeDir 'standard-input.log'
