@@ -6,7 +6,7 @@
 // open, and fail closed if the card has not been laid out yet.
 inline bool CandidateReceivesPointer(float x, float y, float left, float top, float width, float height, bool popupOpen)
 {
-    if (popupOpen || width <= 0.0f || height <= 0.0f)
+    if (popupOpen || !(width > 0.0f) || !(height > 0.0f))
         return true;
     return x >= left && x < left + width && y >= top && y < top + height;
 }

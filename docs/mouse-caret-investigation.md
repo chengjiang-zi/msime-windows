@@ -7,6 +7,8 @@
 - 在一次性 Windows 测试机的 Rich Edit 控件中输入 `nihao`，用控件坐标确认点击命中第二个字符附近后，`WindowFromPoint` 返回的是个人版候选窗口，而非输入框。系统选区留在末尾，继续输入 `x` 得到 `nihaox`。普通 Edit 控件未能提供未上屏文字的坐标，因此其测试结果是无法判断。见[定位记录](https://github.com/chengjiang-zi/msime-windows/actions/runs/40758956595)。
 - 临时裁去候选窗口顶部透明区域后，点击到达 Rich Edit，测试程序的 TSF 鼠标监听器收到字符边界 1；未修改的输入法仍将 `x` 加在末尾。该实验后续的候选词点击检查失败，原因待查，不能当成可发布修复。见[窗口区域实验](https://github.com/chengjiang-zi/msime-windows/actions/runs/40760887098)。
 - 在未修改的基准包上，单击候选词可以正常上屏。测试只覆盖一次性机器上的默认皮肤和一个富文本控件，不能推断所有应用、皮肤或显示缩放的行为。
+- 后续实验发现，测试编辑框保留鼠标捕获时，候选点击会被送回编辑框；仅在测试程序中释放捕获后，裁剪区域保留与重置两种情况下，候选点击均可上屏。见[捕获诊断](https://github.com/chengjiang-zi/msime-windows/actions/runs/40763518788)。这不代表输入法可以跨进程直接释放宿主的鼠标捕获。
+- 另一实验让 TSF 监听器消费按下和松开事件，但在后续检查时编辑框仍持有捕获，实验未通过。见[事件消费实验](https://github.com/chengjiang-zi/msime-windows/actions/runs/40764231017)。还需要检查点击前、按下后、松开后的状态，确定捕获究竟何时产生。
 
 ## 需要解决的问题
 

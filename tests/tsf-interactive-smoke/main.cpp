@@ -580,13 +580,23 @@ int main(int argc, char **argv) {
         click[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
         click[1] = click[0];
         click[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
-        if (SendInput(2, click, sizeof(INPUT)) != 2) {
+        std::cout << "MOUSE_CAPTURE_BEFORE_CLICK: " << (GetCapture() == edit) << "\n";
+        if (SendInput(1, &click[0], sizeof(INPUT)) != 1) {
+          mouseTracker.Detach();
+          DestroyWindow(window);
+          CoUninitialize();
+          return 1;
+        }
+        PumpFor(100);
+        std::cout << "MOUSE_CAPTURE_AFTER_DOWN: " << (GetCapture() == edit) << "\n";
+        if (SendInput(1, &click[1], sizeof(INPUT)) != 1) {
           mouseTracker.Detach();
           DestroyWindow(window);
           CoUninitialize();
           return 1;
         }
         PumpFor(500);
+        std::cout << "MOUSE_CAPTURE_AFTER_UP: " << (GetCapture() == edit) << "\n";
         std::cout << "MOUSE_TRACKER_COUNT: " << mouseTracker.probe->events << "\n";
         if (consumeClick && mouseTracker.probe->events < 2) {
           std::cerr << "The mouse sink did not receive the click.\n";
