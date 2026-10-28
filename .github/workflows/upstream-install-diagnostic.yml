@@ -106,6 +106,11 @@ jobs:
             $env:CHENGJIANG_TEST_USERNAME = $userName
             $env:CHENGJIANG_TEST_PASSWORD = $password
             $launcher = Join-Path $build 'Release/personal-standard-desktop-launch.exe'
+            $env:CHENGJIANG_TEST_TIMEOUT_MS = '30000'
+            Write-Host 'STAGE: start a system command as the standard user.'
+            & $launcher "$env:SystemRoot/System32/cmd.exe" /c exit 0
+            if ($LASTEXITCODE -ne 0) { throw 'Standard-user system command did not complete.' }
+            Remove-Item Env:CHENGJIANG_TEST_TIMEOUT_MS
             $log = Join-Path $probeDir 'standard-input.log'
             $settings = Join-Path (Split-Path -Parent $state.ServerPath) 'ChengjiangImeSettings.exe'
             & $launcher (Join-Path $probeDir 'probe.exe') $settings $state.ServerPath (Join-Path $probeDir 'smoke.exe') `
@@ -119,7 +124,7 @@ jobs:
             }
             Write-Host 'PASS: actual standard user committed Chinese text without certificate trust.'
           } finally {
-            Remove-Item Env:CHENGJIANG_TEST_USERNAME, Env:CHENGJIANG_TEST_PASSWORD -ErrorAction SilentlyContinue
+            Remove-Item Env:CHENGJIANG_TEST_USERNAME, Env:CHENGJIANG_TEST_PASSWORD, Env:CHENGJIANG_TEST_TIMEOUT_MS -ErrorAction SilentlyContinue
             $password = $null
             if ($createdUser) { Remove-LocalUser -Name $userName }
           }
