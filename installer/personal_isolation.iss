@@ -82,7 +82,7 @@ end;
 function OverlapsUpstreamData(const Directory: String): Boolean;
 var
   Candidate: String;
-  Upstream: array[0..7] of String;
+  Upstream: array[0..8] of String;
   Index: Integer;
 begin
   Result := True;
@@ -100,7 +100,8 @@ begin
   Upstream[5] := ExpandConstant('{commonappdata}\metasequoiaime');
   Upstream[6] := ExpandConstant('{sys}\IME\MetasequoiaIME');
   Upstream[7] := ExpandConstant('{syswow64}\IME\MetasequoiaIME');
-  for Index := 0 to 7 do
+  Upstream[8] := AddBackslash(PersonalInteractiveLocalData) + 'metasequoiaime';
+  for Index := 0 to 8 do
     if Trim(Upstream[Index]) <> '' then
     begin
       Upstream[Index] := RemoveBackslashUnlessRoot(ExpandFileName(Upstream[Index]));

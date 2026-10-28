@@ -126,7 +126,7 @@ class PersonalIdentityTests(unittest.TestCase):
         installer = read("installer/msime_setup.iss")
         self.assertIn("AppId={{C4548683-2C88-54A9-A7AE-CD6008F8154C}", installer)
         self.assertNotIn("AppId={{A7C3E91F-4B2D-4E8A-9F1C-6D5E8B0A2C4D}", installer)
-        self.assertIn("{localappdata}\\chengjiangime", installer)
+        self.assertIn("AddBackslash(PersonalInteractiveLocalData) + 'chengjiangime'", installer)
         self.assertIn("{commonpf64}\\chengjiangime", installer)
         self.assertIn("IME\\ChengjiangIME", installer)
         self.assertNotIn("TryDeleteTree(ExpandConstant('{localappdata}\\metasequoiaime", installer)

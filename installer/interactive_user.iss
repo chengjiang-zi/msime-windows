@@ -4,25 +4,22 @@ function PersonalGetShellWindow: HWND;
   external 'GetShellWindow@user32.dll stdcall';
 function PersonalGetWindowThreadProcessId(Window: HWND; var ProcessId: Cardinal): Cardinal;
   external 'GetWindowThreadProcessId@user32.dll stdcall';
+function PersonalGetCurrentProcessId: Cardinal;
+  external 'GetCurrentProcessId@kernel32.dll stdcall';
 
-function InteractiveUserInfo(var Sid, LocalData: String): Boolean;
 var
-  Shell: HWND;
-  ProcessId: Cardinal;
+  PersonalInteractiveSid: String;
+  PersonalInteractiveLocalData: String;
+  PersonalUninstallSameUser: Boolean;
+
+function ProcessUserSid(ProcessId: Cardinal; var Sid: String): Boolean;
+var
   Locator: Variant;
   Service: Variant;
   ResultObject: Variant;
-  ProfilePath: String;
-  RawLocalData: String;
 begin
   Result := False;
   Sid := '';
-  LocalData := '';
-  Shell := PersonalGetShellWindow;
-  if Shell = 0 then
-    exit;
-  ProcessId := 0;
-  PersonalGetWindowThreadProcessId(Shell, ProcessId);
   if ProcessId = 0 then
     exit;
   try
@@ -36,6 +33,26 @@ begin
     exit;
   end;
   if (Copy(Sid, 1, 4) <> 'S-1-') or (Length(Sid) > 184) then
+    exit;
+  Result := True;
+end;
+
+function InteractiveUserInfo(var Sid, LocalData: String): Boolean;
+var
+  Shell: HWND;
+  ProcessId: Cardinal;
+  ProfilePath: String;
+  RawLocalData: String;
+begin
+  Result := False;
+  Sid := '';
+  LocalData := '';
+  Shell := PersonalGetShellWindow;
+  if Shell = 0 then
+    exit;
+  ProcessId := 0;
+  PersonalGetWindowThreadProcessId(Shell, ProcessId);
+  if not ProcessUserSid(ProcessId, Sid) then
     exit;
   ProfilePath := '';
   if not RegQueryStringValue(HKLM, 'Software\Microsoft\Windows NT\CurrentVersion\ProfileList\' + Sid,

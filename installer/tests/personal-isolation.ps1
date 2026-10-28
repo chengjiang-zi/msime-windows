@@ -23,7 +23,8 @@ try {
     }
     $upstream = Join-Path $testRoot 'upstream'
     $personal = Join-Path $testRoot 'personal'
-    New-Item -ItemType Directory -Path $upstream, $personal | Out-Null
+    $otherLocal = Join-Path $testRoot 'other-user-local'
+    New-Item -ItemType Directory -Path $upstream, $personal, $otherLocal | Out-Null
     New-Item -ItemType Junction -Path $junction -Target $upstream | Out-Null
     $env:METASEQUOIA_IME_DATA_DIR = $upstream
     $cases = @(
@@ -35,6 +36,8 @@ try {
         @{ Name = 'short-name'; Path = (Join-Path $testRoot 'UPSTRE~1'); Expect = 'blocked' },
         @{ Name = 'network'; Path = '\\example.invalid\share\data'; Expect = 'blocked' },
         @{ Name = 'upstream-default'; Path = (Join-Path $env:LOCALAPPDATA 'metasequoiaime'); Expect = 'blocked' },
+        @{ Name = 'other-user-default'; Path = (Join-Path $otherLocal 'metasequoiaime\child');
+           InteractiveLocal = $otherLocal; Expect = 'blocked' },
         @{ Name = 'upstream-program'; Path = (Join-Path $env:ProgramFiles 'metasequoiaime\server'); Expect = 'blocked' },
         @{ Name = 'upstream-system'; Path = (Join-Path $env:SystemRoot 'System32\IME\MetasequoiaIME'); Expect = 'blocked' },
         @{ Name = 'independent'; Path = $personal; Expect = 'allowed' }
@@ -56,6 +59,9 @@ try {
         $result = Join-Path $testRoot ($case.Name + '.txt')
         $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART',
             "/TARGET=`"$($case.Path)`"", "/RESULT=`"$result`"")
+        if ($case.ContainsKey('InteractiveLocal')) {
+            $arguments += "/INTERACTIVELOCAL=`"$($case.InteractiveLocal)`""
+        }
         $process = Start-Process -FilePath $probe -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
         if (-not (Test-Path -LiteralPath $result -PathType Leaf)) {
             throw "Probe $($case.Name) produced no result (exit $($process.ExitCode))."

@@ -109,6 +109,9 @@ Name: "{code:GetDataDir}\helpcodes\custom"
 Name: "{code:GetDataDir}\shuangpin\custom"
 
 [Files]
+; Used only by the elevated installer to register an interactive-user task.
+Source: "register-personal-watchdog.ps1"; Flags: dontcopy
+
 ; 独立安装应用图标，供 Windows“已安装的应用”列表稳定显示。
 Source: "{#MySourceRoot}\MetasequoiaIME.ico"; \
     DestDir: "{commonpf64}\chengjiangime"; Flags: ignoreversion
@@ -250,6 +253,9 @@ var
   UserConfigExistedBeforeInstall: Boolean;
   DataDirAdoptedEmpty: Boolean;
 
+#include "interactive_user.iss"
+#include "personal_watchdog_task.iss"
+
 // VC 运行库不随包分发：它是系统级共享组件，安装器不该替用户装。缺了它 Server 直接
 // 起不来，而故障现场在安装结束之后，用户看不到任何解释，所以在安装开始前查一遍，
 // 把原因当场说清楚。
@@ -321,6 +327,14 @@ var
 begin
   Result := True;
 
+  if not InteractiveUserInfo(PersonalInteractiveSid, PersonalInteractiveLocalData) then
+  begin
+    Log('Could not identify the interactive desktop user and data directory; stopping setup.');
+    SuppressibleMsgBox('无法安全确认当前登录用户的数据目录，请从该用户的桌面启动安装。', mbError, MB_OK, IDOK);
+    Result := False;
+    exit;
+  end;
+
   NeedsVCRuntime := not VCRuntimeIsInstalled;
   { 有版本号却没通过判定，就是装了但太旧，提示里要和「没装」分开说。}
   VCRuntimeVersion := ReadVCRuntimeVersion;
@@ -376,7 +390,7 @@ begin
     then
       PreviousDataDir := RemoveBackslashUnlessRoot(Trim(Recorded))
     else
-      PreviousDataDir := ExpandConstant('{localappdata}\chengjiangime');
+      PreviousDataDir := AddBackslash(PersonalInteractiveLocalData) + 'chengjiangime';
   end;
   Result := PreviousDataDir;
 end;
@@ -982,7 +996,29 @@ begin
 end;
 
 function InitializeUninstall(): Boolean;
+var
+  CurrentSid: String;
+  KeyboardKey: String;
 begin
+  Result := False;
+  if (not InteractiveUserInfo(PersonalInteractiveSid, PersonalInteractiveLocalData)) or
+     (not ProcessUserSid(PersonalGetCurrentProcessId, CurrentSid)) then
+  begin
+    MsgBox('无法确认当前桌面用户，已停止卸载。请从使用个人版的账户桌面重试。', mbError, MB_OK);
+    exit;
+  end;
+  PersonalUninstallSameUser := CompareText(CurrentSid, PersonalInteractiveSid) = 0;
+  if not PersonalUninstallSameUser then
+  begin
+    KeyboardKey := PersonalInteractiveSid + '\Control Panel\International\User Profile\zh-Hans-CN';
+    if (not RegKeyExists(HKU, KeyboardKey)) or
+       RegValueExists(HKU, KeyboardKey,
+         '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}') then
+    begin
+      MsgBox('卸载使用了不同的管理员账户。请先在当前用户的 Windows 语言设置中移除“水杉输入法 · 个人版”，然后重新卸载。', mbError, MB_OK);
+      exit;
+    end;
+  end;
   RegQueryStringValue(
     HKLM,
     'Software\Chengjiang\PersonalIME',
@@ -1096,31 +1132,12 @@ end;
 procedure CreateWatchdogLogonTask;
 var
   WatchdogPath: String;
-  Params: String;
-  ResultCode: Integer;
 begin
-  ResultCode := -1;
   WatchdogPath := ExpandConstant(
     '{commonpf64}\chengjiangime\server\{#MyWatchdogName}');
-  { This still needs to be made aware of a different account supplying UAC
-    credentials. Until then, the install guard stays enabled. }
-  Params :=
-    '/Create /F /TN "{#MyWatchdogTaskName}" /SC ONLOGON ' +
-    '/RL LIMITED /IT /TR "\"' + WatchdogPath + '\""';
-  if
-    (not Exec(
-      ExpandConstant('{sys}\schtasks.exe'),
-      Params,
-      '',
-      SW_HIDE,
-      ewWaitUntilTerminated,
-      ResultCode
-    )) or
-    (ResultCode <> 0)
-  then
+  if not RegisterPersonalWatchdogTask(PersonalInteractiveSid, '{#MyWatchdogTaskName}', WatchdogPath) then
     RaiseException(
-      '无法创建输入法登录启动任务（退出码：' +
-      IntToStr(ResultCode) + '）。');
+      '无法为当前登录用户创建输入法启动任务，请检查任务计划程序后重试。');
 end;
 
 procedure TryDeleteTree(const Path: String);
@@ -1839,11 +1856,11 @@ procedure ClearOurInputMethodOverride;
 var
   OverrideId: String;
 begin
-  if RegQueryStringValue(HKCU, 'Control Panel\International\User Profile',
+  if RegQueryStringValue(HKU, PersonalInteractiveSid + '\Control Panel\International\User Profile',
     'InputMethodOverride', OverrideId) and
     (CompareText(OverrideId,
       '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}') = 0) then
-    RegDeleteValue(HKCU, 'Control Panel\International\User Profile',
+    RegDeleteValue(HKU, PersonalInteractiveSid + '\Control Panel\International\User Profile',
       'InputMethodOverride');
 end;
 
@@ -1869,7 +1886,8 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
   begin
-    RemovePersonalKeyboardForCurrentUser;
+    if PersonalUninstallSameUser then
+      RemovePersonalKeyboardForCurrentUser;
     ClearOurInputMethodOverride;
     { 设置页「游戏兼容」记下的登记名称。升级时要留着（TSF DLL 注册时读它），卸载时不能留：
       否则日后重装会悄悄沿用别名。}
@@ -1894,7 +1912,7 @@ begin
     { 数据目录可能被用户指到了别的盘，甚至指到一个本来就有文件的文件夹（#537）。}
     RemoveDataDir(ResolvePreviousDataDir);
     { 删除空目录时不会触碰其余文件。个人版没有需要清理的旧版 WebView 数据。}
-    RemoveDir(ExpandConstant('{localappdata}\chengjiangime'));
+    RemoveDir(AddBackslash(PersonalInteractiveLocalData) + 'chengjiangime');
     RemoveDir(ExpandConstant('{commonappdata}\chengjiangime'));
   end;
 end;
