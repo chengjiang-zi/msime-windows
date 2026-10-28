@@ -6,7 +6,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $log = Join-Path $ResultDir 'standard-input.log'
+function Mark([string]$Message) { [IO.File]::AppendAllText($log, "STAGE: $Message`n") }
 try {
+    Mark 'standard process started'
     if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne $ExpectedSid) {
         throw 'The process is not running as the temporary standard user.'
     }
@@ -16,25 +18,34 @@ try {
             throw 'The development certificate is trusted.'
         }
     }
+    Mark 'certificate stores checked'
     $languages = Get-WinUserLanguageList
     if (-not ($languages | Where-Object { $_.LanguageTag -like 'zh-*' })) {
         $languages.Add('zh-Hans-CN')
         Set-WinUserLanguageList -LanguageList $languages -Force
     }
+    Mark 'language list ready'
     $state = Get-ItemProperty -LiteralPath 'HKLM:\Software\Chengjiang\PersonalIME'
     $settings = Join-Path (Split-Path -Parent $state.ServerPath) 'ChengjiangImeSettings.exe'
-    $register = Start-Process -FilePath $settings -ArgumentList '--register-profile' -WindowStyle Hidden -Wait -PassThru
+    Mark 'registering profile'
+    $register = Start-Process -FilePath $settings -ArgumentList '--register-profile' -WindowStyle Hidden -PassThru
+    if (-not $register.WaitForExit(45000)) { Stop-Process -Id $register.Id -Force; throw 'Profile registration timed out.' }
+    $register.Refresh()
     if ($register.ExitCode -ne 0) { throw "Profile registration failed: $($register.ExitCode)" }
+    Mark 'profile registered'
     $server = Start-Process -FilePath $state.ServerPath -ArgumentList '--watchdog-managed' `
         -WorkingDirectory (Split-Path -Parent $state.ServerPath) -WindowStyle Hidden -PassThru
     Start-Sleep -Seconds 3
     $server.Refresh()
     if ($server.HasExited) { throw "Standard-user Server exited: $($server.ExitCode)" }
+    Mark 'server started'
     $errorLog = Join-Path $ResultDir 'standard-input-error.log'
-    $smoke = Start-Process -FilePath $SmokeExe -RedirectStandardOutput $log -RedirectStandardError $errorLog `
+    $smokeLog = Join-Path $ResultDir 'standard-input-output.log'
+    $smoke = Start-Process -FilePath $SmokeExe -RedirectStandardOutput $smokeLog -RedirectStandardError $errorLog `
         -WindowStyle Hidden -Wait -PassThru
     $result = $smoke.ExitCode
-    $output = [IO.File]::ReadAllText($log) + [IO.File]::ReadAllText($errorLog)
+    $output = [IO.File]::ReadAllText($smokeLog) + [IO.File]::ReadAllText($errorLog)
+    [IO.File]::AppendAllText($log, $output)
     if ($result -ne 0 -or $output.Contains('SKIP:') -or
         -not $output.Contains('PASS: personal TSF committed Chinese text')) {
         throw "Standard-user input did not pass ($result)."

@@ -132,7 +132,7 @@ int wmain(int argc, wchar_t **argv) {
     return Fail("CreateProcessWithTokenW");
   }
   CloseHandle(process.hThread);
-  const DWORD wait = WaitForSingleObject(process.hProcess, 360000);
+  const DWORD wait = WaitForSingleObject(process.hProcess, 180000);
   if (wait != WAIT_OBJECT_0) {
     TerminateProcess(process.hProcess, 1);
     CloseHandle(process.hProcess);
