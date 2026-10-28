@@ -155,6 +155,17 @@ struct MouseTrackerRegistration {
   ~MouseTrackerRegistration() { Detach(); }
 };
 
+// Disposable-VM experiment: remove the top padding from the candidate HWND's
+// region and restore it at scope exit. This changes visuals as well as hits.
+struct CandidateRegionExperiment {
+  HWND window = nullptr;
+  bool applied = false;
+  ~CandidateRegionExperiment() {
+    if (applied && IsWindow(window))
+      SetWindowRgn(window, nullptr, TRUE);
+  }
+};
+
 // Capture only the disposable test candidate window for visual review.
 bool CaptureCandidate(HWND window, HWND background, const wchar_t *name) {
   wchar_t directory[MAX_PATH]{};
@@ -234,11 +245,13 @@ int main(int argc, char **argv) {
                    argument != "--horizontal-navigation=6" &&
                    argument != "--horizontal-navigation=9" &&
                    argument != "--mouse-caret-diagnostic" &&
-                   argument != "--mouse-caret-richedit")) {
+                   argument != "--mouse-caret-richedit" &&
+                   argument != "--mouse-caret-region")) {
     std::cerr << "Unexpected interactive smoke-test arguments.\n";
     return 1;
   }
-  const bool richEdit = argument == "--mouse-caret-richedit";
+  const bool testRegion = argument == "--mouse-caret-region";
+  const bool richEdit = argument == "--mouse-caret-richedit" || testRegion;
   const bool testMouseCaret = argument == "--mouse-caret-diagnostic" || richEdit;
   const bool testHorizontalNavigation = argc == 2 && !testMouseCaret;
   const int pageSize = testHorizontalNavigation ? argument.back() - '0' : 0;
@@ -498,6 +511,23 @@ int main(int argc, char **argv) {
     MouseTrackerRegistration mouseTracker;
     if (richEdit)
       AttachMouseTracker(mouseTracker.probe, &mouseTracker.tracker, &mouseTracker.cookie);
+    CandidateRegionExperiment region;
+    if (testRegion) {
+      region.window = FindWindowW(L"chengjiangime_windows", L"chengjiangimecandwnd");
+      RECT bounds{};
+      if (region.window && GetWindowRect(region.window, &bounds) && bounds.bottom - bounds.top > 25) {
+        HRGN cut = CreateRectRgn(0, 25, bounds.right - bounds.left, bounds.bottom - bounds.top);
+        if (cut) {
+          region.applied = SetWindowRgn(region.window, cut, TRUE) != 0;
+          if (!region.applied)
+            DeleteObject(cut);
+        }
+      }
+      std::cout << "MOUSE_REGION_APPLIED: " << region.applied << "\n";
+      PumpFor(500);
+      if (!CaptureCandidate(window, window, L"mouse-caret-region-window"))
+        std::cerr << "Could not capture the disposable region experiment.\n";
+    }
     if (!*preedit || first == -1 || second == -1) {
       std::cout << "MOUSE_CARET: inconclusive; inline preedit positions unavailable"
                 << " (length=" << std::wcslen(preedit) << ", first=" << first
@@ -576,6 +606,10 @@ int main(int argc, char **argv) {
       // The pass-through experiment must not make actual candidate rows
       // unclickable. Use the default vertical skin in the disposable desktop.
       mouseTracker.Detach();
+      if (region.applied && IsWindow(region.window)) {
+        SetWindowRgn(region.window, nullptr, TRUE);
+        region.applied = false;
+      }
       SetWindowTextW(edit, L"");
       for (const WORD key : {WORD('N'), WORD('I'), WORD('H'), WORD('A'), WORD('O')}) {
         if (!SendKey(key)) {
