@@ -11,11 +11,22 @@ on:
       - installer/personal_watchdog_task.iss
       - installer/interactive_user.iss
       - 'installer/tests/uninstall-abort-*'
+      - installer/tests/alternate-admin-ci.ps1
+      - installer/tests/interactive-user-probe.iss
+      - 'tests/alternate-admin-launch/**'
 
 permissions:
   contents: read
 
 jobs:
+  alternate-admin:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check desktop user under a different elevated account
+        shell: pwsh
+        run: ./installer/tests/alternate-admin-ci.ps1
   uninstall-abort:
     runs-on: windows-2025
     timeout-minutes: 10

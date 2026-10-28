@@ -16,9 +16,13 @@ function InitializeSetup: Boolean;
 var
   Sid: String;
   LocalData: String;
+  ProcessSid: String;
   Lines: TArrayOfString;
 begin
-  SetArrayLength(Lines, 2);
+  SetArrayLength(Lines, 3);
+  if not ProcessUserSid(PersonalGetCurrentProcessId, ProcessSid) then
+    ProcessSid := 'unavailable';
+  Lines[2] := ProcessSid;
   if InteractiveUserInfo(Sid, LocalData) then
   begin
     Lines[0] := Sid;
