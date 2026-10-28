@@ -1102,15 +1102,13 @@ begin
   ResultCode := -1;
   WatchdogPath := ExpandConstant(
     '{commonpf64}\chengjiangime\server\{#MyWatchdogName}');
-  { Run schtasks as the user who started Setup, not the account supplying UAC
-    credentials. Without /RU, schtasks assigns the task to its own user; /IT
-    and LIMITED keep the watchdog in that user's interactive session. }
+  { This still needs to be made aware of a different account supplying UAC
+    credentials. Until then, the install guard stays enabled. }
   Params :=
     '/Create /F /TN "{#MyWatchdogTaskName}" /SC ONLOGON ' +
     '/RL LIMITED /IT /TR "\"' + WatchdogPath + '\""';
   if
-    (not ShellExecAsOriginalUser(
-      '',
+    (not Exec(
       ExpandConstant('{sys}\schtasks.exe'),
       Params,
       '',
