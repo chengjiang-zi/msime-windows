@@ -389,6 +389,13 @@ int main(int argc, char **argv) {
                 << ", second=" << second << ").\n";
     } else {
       POINT point{secondPoint.x + 1, firstPoint.y + 6};
+      POINTL richPoint{point.x, point.y};
+      const LRESULT target = richEdit
+                                 ? SendMessageW(edit, EM_CHARFROMPOS, 0, reinterpret_cast<LPARAM>(&richPoint))
+                                 : LOWORD(SendMessageW(edit, EM_CHARFROMPOS, 0, MAKELPARAM(point.x, point.y)));
+      std::cout << "MOUSE_CARET_TARGET: first=" << firstPoint.x << ',' << firstPoint.y
+                << " second=" << secondPoint.x << ',' << secondPoint.y << " target="
+                << point.x << ',' << point.y << " nearest=" << target << "\n";
       ClientToScreen(edit, &point);
       if (!SetCursorPos(point.x, point.y)) {
         std::cout << "MOUSE_CARET: inconclusive; could not move test pointer.\n";
