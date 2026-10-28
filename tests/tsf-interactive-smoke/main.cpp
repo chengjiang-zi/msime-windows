@@ -572,6 +572,58 @@ int main(int argc, char **argv) {
         std::cout << std::dec << " (UTF-16 code units)\n";
       }
     }
+    if (richEdit) {
+      // The pass-through experiment must not make actual candidate rows
+      // unclickable. Use the default vertical skin in the disposable desktop.
+      mouseTracker.Detach();
+      SetWindowTextW(edit, L"");
+      for (const WORD key : {WORD('N'), WORD('I'), WORD('H'), WORD('A'), WORD('O')}) {
+        if (!SendKey(key)) {
+          mouseTracker.Detach();
+          DestroyWindow(window);
+          CoUninitialize();
+          return 1;
+        }
+        PumpFor(250);
+      }
+      PumpFor(1000);
+      const HWND cardWindow = FindWindowW(L"chengjiangime_windows", L"chengjiangimecandwnd");
+      RECT cardBounds{};
+      if (!cardWindow || !GetWindowRect(cardWindow, &cardBounds) ||
+          !SetCursorPos(cardBounds.left + 60, cardBounds.top + 69)) {
+        std::cerr << "Could not target a candidate row.\n";
+        mouseTracker.Detach();
+        DestroyWindow(window);
+        CoUninitialize();
+        return 1;
+      }
+      INPUT click[2]{};
+      click[0].type = INPUT_MOUSE;
+      click[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+      click[1] = click[0];
+      click[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+      if (SendInput(2, click, sizeof(INPUT)) != 2) {
+        mouseTracker.Detach();
+        DestroyWindow(window);
+        CoUninitialize();
+        return 1;
+      }
+      PumpFor(1000);
+      wchar_t clickedCandidate[256]{};
+      GetWindowTextW(edit, clickedCandidate,
+                     static_cast<int>(sizeof(clickedCandidate) / sizeof(clickedCandidate[0])));
+      bool committed = false;
+      for (const wchar_t *p = clickedCandidate; *p; ++p)
+        committed = committed || (*p >= 0x4e00 && *p <= 0x9fff);
+      if (!committed) {
+        std::cerr << "Clicking the first candidate did not commit Chinese text.\n";
+        mouseTracker.Detach();
+        DestroyWindow(window);
+        CoUninitialize();
+        return 1;
+      }
+      std::cout << "PASS: clicking a candidate row still commits text.\n";
+    }
   }
   DestroyWindow(window);
   CoUninitialize();
