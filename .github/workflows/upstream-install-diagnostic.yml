@@ -80,6 +80,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Smoke configuration failed.' }
           cmake --build $smokeBuild --config Release --parallel
           if ($LASTEXITCODE -ne 0) { throw 'Smoke build failed.' }
+          $desktopSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+          & "$env:SystemRoot/System32/icacls.exe" $smokeBuild /grant "*$($desktopSid):(OI)(CI)RX" /T /C
+          if ($LASTEXITCODE -ne 0) { throw 'Could not grant the desktop SID access to the test binary.' }
           Get-Process -Name ChengjiangImeWatchdog, ChengjiangImeServer -ErrorAction SilentlyContinue | Stop-Process -Force
           $log = Join-Path $env:RUNNER_TEMP 'limited-input.log'
           & "$build/Release/personal-limited-token-launch.exe" (Get-Command pwsh).Source -NoProfile -File `
