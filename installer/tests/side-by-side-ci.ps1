@@ -186,7 +186,7 @@ try {
 # A legitimate upgrade must keep personal user data and leave the upstream
 # process and registration intact. This exercises the real installer twice.
 $translationFile = Join-Path $personalData 'custom_translations.txt'
-$translationValue = 'hello=你好'
+$translationValue = "hello`t你好"
 [IO.File]::WriteAllText($translationFile, $translationValue)
 $upgradeCode = Run-Installer $PersonalInstaller $personalRoot (Join-Path $taskRoot 'upgrade.log')
 if ($upgradeCode -ne 0) { throw "Personal upgrade failed: $upgradeCode" }
