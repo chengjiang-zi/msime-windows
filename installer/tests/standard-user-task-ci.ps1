@@ -14,14 +14,14 @@ try {
     $user = New-LocalUser -Name $userName -Password $password -PasswordNeverExpires
     $createdUser = $true
     $account = "$env:COMPUTERNAME\$userName"
-    $credential = [Management.Automation.PSCredential]::new($account, $password)
     $exe = Join-Path $env:SystemRoot 'System32\schtasks.exe'
     $arguments = @('/Create', '/F', '/TN', "`"$taskName`"", '/SC', 'ONLOGON', '/RL', 'LIMITED', '/IT',
+        '/RU', "`"$account`"", '/RP', '""',
         '/TR', "`"$env:SystemRoot\System32\notepad.exe`"")
     $stdout = Join-Path $env:RUNNER_TEMP ($taskName + '-stdout.txt')
     $stderr = Join-Path $env:RUNNER_TEMP ($taskName + '-stderr.txt')
-    $process = Start-Process -FilePath $exe -ArgumentList $arguments -Credential $credential `
-        -LoadUserProfile -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+    $process = Start-Process -FilePath $exe -ArgumentList $arguments `
+        -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
     if (-not $process.WaitForExit(60000)) {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         throw 'Standard-user scheduled task creation timed out.'
@@ -40,7 +40,7 @@ try {
         $taskSid = [Security.Principal.SecurityIdentifier]::new($task.Principal.UserId)
     }
     if ($taskSid.Value -ne $user.SID.Value) { throw 'Task was not registered for the standard user.' }
-    Write-Host 'PASS: standard user can create an interactive logon task for their own account.'
+    Write-Host 'PASS: administrator can register an interactive logon task for the standard user without a password.'
 } finally {
     if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
