@@ -20,6 +20,26 @@ int Fail(const char *stage) {
   std::cerr << stage << " failed with Windows error " << GetLastError() << "\n";
   return 1;
 }
+
+bool EnableImpersonationPrivilege() {
+  HANDLE self = nullptr;
+  if (!OpenProcessToken(GetCurrentProcess(),
+                        TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &self))
+    return false;
+  TOKEN_PRIVILEGES privileges{};
+  privileges.PrivilegeCount = 1;
+  const BOOL found = LookupPrivilegeValueW(nullptr, SE_IMPERSONATE_NAME,
+                                           &privileges.Privileges[0].Luid);
+  privileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+  SetLastError(ERROR_SUCCESS);
+  const BOOL adjusted =
+      found && AdjustTokenPrivileges(self, FALSE, &privileges,
+                                     sizeof(privileges), nullptr, nullptr);
+  const DWORD status = GetLastError();
+  CloseHandle(self);
+  SetLastError(status);
+  return adjusted && status == ERROR_SUCCESS;
+}
 } // namespace
 
 // CI-only: create a process using a temporary alternate admin's elevated token
@@ -37,6 +57,8 @@ int wmain(int argc, wchar_t **argv) {
   std::wstring password = Environment(L"CHENGJIANG_TEST_PASSWORD");
   if (user.empty() || password.empty())
     return 1;
+  if (!EnableImpersonationPrivilege())
+    return Fail("Enable SeImpersonatePrivilege");
   HANDLE token = nullptr;
   const BOOL loggedOn =
       LogonUserW(user.c_str(), L".", password.c_str(),
@@ -69,6 +91,16 @@ int wmain(int argc, wchar_t **argv) {
     CloseHandle(token);
     return 1;
   }
+  HANDLE primary = nullptr;
+  if (!DuplicateTokenEx(token, MAXIMUM_ALLOWED, nullptr, SecurityImpersonation,
+                        TokenPrimary, &primary)) {
+    const DWORD error = GetLastError();
+    CloseHandle(token);
+    SetLastError(error);
+    return Fail("DuplicateTokenEx");
+  }
+  CloseHandle(token);
+  token = primary;
   std::wstring command;
   for (int index = 1; index < argc; ++index) {
     const std::wstring value = argv[index];
@@ -94,10 +126,13 @@ int wmain(int argc, wchar_t **argv) {
   const BOOL started = CreateProcessWithTokenW(
       token, LOGON_WITH_PROFILE, argv[1], command.data(),
       CREATE_UNICODE_ENVIRONMENT, environment, nullptr, &startup, &process);
+  const DWORD startError = started ? ERROR_SUCCESS : GetLastError();
   DestroyEnvironmentBlock(environment);
   CloseHandle(token);
-  if (!started)
+  if (!started) {
+    SetLastError(startError);
     return Fail("CreateProcessWithTokenW");
+  }
   CloseHandle(process.hThread);
   const DWORD wait = WaitForSingleObject(process.hProcess, 120000);
   if (wait != WAIT_OBJECT_0) {
