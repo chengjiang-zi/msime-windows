@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <msctf.h>
+#include <windowsx.h>
 
 #include <chrono>
 #include <iostream>
@@ -117,11 +118,13 @@ int main(int argc, char **argv) {
   const std::string argument = argc == 2 ? argv[1] : "";
   if (argc > 2 || (argc == 2 && argument != "--horizontal-navigation=3" &&
                    argument != "--horizontal-navigation=6" &&
-                   argument != "--horizontal-navigation=9")) {
+                   argument != "--horizontal-navigation=9" &&
+                   argument != "--mouse-caret-diagnostic")) {
     std::cerr << "Unexpected interactive smoke-test arguments.\n";
     return 1;
   }
-  const bool testHorizontalNavigation = argc == 2;
+  const bool testMouseCaret = argument == "--mouse-caret-diagnostic";
+  const bool testHorizontalNavigation = argc == 2 && !testMouseCaret;
   const int pageSize = testHorizontalNavigation ? argument.back() - '0' : 0;
   if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))
     return 1;
@@ -335,6 +338,76 @@ int main(int argc, char **argv) {
       return 1;
     }
     std::cout << "PASS: " << pageSize << " right keys select the first candidate on the next page.\n";
+  }
+  if (testMouseCaret) {
+    // Diagnostic only: inspect how a standard Edit host reacts to a real mouse
+    // click inside its inline preedit. Do not treat unsupported hosts as pass.
+    SetWindowTextW(edit, L"");
+    for (const WORD key : {WORD('N'), WORD('I'), WORD('H'), WORD('A'), WORD('O')}) {
+      if (!SendKey(key)) {
+        DestroyWindow(window);
+        CoUninitialize();
+        return 1;
+      }
+      PumpFor(250);
+    }
+    PumpFor(1000);
+    wchar_t preedit[256]{};
+    GetWindowTextW(edit, preedit, static_cast<int>(sizeof(preedit) / sizeof(preedit[0])));
+    const LRESULT first = SendMessageW(edit, EM_POSFROMCHAR, 0, 0);
+    const LRESULT second = SendMessageW(edit, EM_POSFROMCHAR, 1, 0);
+    if (!*preedit || first == -1 || second == -1) {
+      std::cout << "MOUSE_CARET: inconclusive; inline preedit positions unavailable.\n";
+    } else {
+      POINT point{GET_X_LPARAM(second) + 1, GET_Y_LPARAM(first) + 6};
+      ClientToScreen(edit, &point);
+      if (!SetCursorPos(point.x, point.y)) {
+        std::cout << "MOUSE_CARET: inconclusive; could not move test pointer.\n";
+      } else {
+        INPUT click[2]{};
+        click[0].type = INPUT_MOUSE;
+        click[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+        click[1] = click[0];
+        click[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+        if (SendInput(2, click, sizeof(INPUT)) != 2) {
+          DestroyWindow(window);
+          CoUninitialize();
+          return 1;
+        }
+        PumpFor(500);
+        DWORD selectionStart = 0;
+        DWORD selectionEnd = 0;
+        SendMessageW(edit, EM_GETSEL, reinterpret_cast<WPARAM>(&selectionStart),
+                     reinterpret_cast<LPARAM>(&selectionEnd));
+        wchar_t clicked[256]{};
+        GetWindowTextW(edit, clicked, static_cast<int>(sizeof(clicked) / sizeof(clicked[0])));
+        if (!SendKey(WORD('X'))) {
+          DestroyWindow(window);
+          CoUninitialize();
+          return 1;
+        }
+        PumpFor(500);
+        if (!SendKey(VK_RETURN)) {
+          DestroyWindow(window);
+          CoUninitialize();
+          return 1;
+        }
+        PumpFor(1000);
+        wchar_t result[256]{};
+        GetWindowTextW(edit, result, static_cast<int>(sizeof(result) / sizeof(result[0])));
+        std::cout << "MOUSE_CARET: before=";
+        for (const wchar_t *p = preedit; *p; ++p)
+          std::cout << std::hex << static_cast<unsigned int>(*p) << ',';
+        std::cout << " after_click=";
+        for (const wchar_t *p = clicked; *p; ++p)
+          std::cout << std::hex << static_cast<unsigned int>(*p) << ',';
+        std::cout << std::dec << " selection=" << selectionStart << ':' << selectionEnd;
+        std::cout << " after=";
+        for (const wchar_t *p = result; *p; ++p)
+          std::cout << std::hex << static_cast<unsigned int>(*p) << ',';
+        std::cout << std::dec << " (UTF-16 code units)\n";
+      }
+    }
   }
   DestroyWindow(window);
   CoUninitialize();

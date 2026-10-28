@@ -65,7 +65,7 @@ jobs:
           $desktop = Join-Path $env:RUNNER_TEMP 'retest-desktop.txt'
           & pwsh -STA -File ./installer/tests/interactive-desktop-probe.ps1 -ResultPath $desktop
           if ($LASTEXITCODE -ne 0) { throw 'Desktop probe failed.' }
-          ./installer/tests/tsf-interactive-smoke.ps1 -DesktopResult $desktop
+          ./installer/tests/tsf-interactive-smoke.ps1 -DesktopResult $desktop -ProbeMouseCaret
       - name: Upload candidate screenshots
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
