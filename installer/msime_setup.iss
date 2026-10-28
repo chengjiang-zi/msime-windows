@@ -111,6 +111,7 @@ Name: "{code:GetDataDir}\shuangpin\custom"
 [Files]
 ; Used only by the elevated installer to register an interactive-user task.
 Source: "register-personal-watchdog.ps1"; Flags: dontcopy
+Source: "register-personal-watchdog.ps1"; DestDir: "{commonpf64}\chengjiangime\server"; Flags: ignoreversion
 
 ; 独立安装应用图标，供 Windows“已安装的应用”列表稳定显示。
 Source: "{#MySourceRoot}\MetasequoiaIME.ico"; \
@@ -1011,11 +1012,9 @@ begin
   if not PersonalUninstallSameUser then
   begin
     KeyboardKey := PersonalInteractiveSid + '\Control Panel\International\User Profile\zh-Hans-CN';
-    if (not RegKeyExists(HKU, KeyboardKey)) or
-       RegValueExists(HKU, KeyboardKey,
-         '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}') then
+    if not RegKeyExists(HKU, KeyboardKey) then
     begin
-      MsgBox('卸载使用了不同的管理员账户。请先在当前用户的 Windows 语言设置中移除“水杉输入法 · 个人版”，然后重新卸载。', mbError, MB_OK);
+      MsgBox('无法确认当前用户的键盘列表，已停止卸载。', mbError, MB_OK);
       exit;
     end;
   end;
@@ -1882,10 +1881,64 @@ begin
   end;
 end;
 
+{ Runs only after uninstall confirmation. The temporary task executes with the
+  logged-in user's interactive token, so input.dll updates that user's HKCU.
+  If it fails, abort before touching program files or the official edition. }
+function RemovePersonalKeyboardForInteractiveUser: Boolean;
+var
+  HelperPath: String;
+  SettingsPath: String;
+  KeyboardKey: String;
+  Params: String;
+  ResultCode: Integer;
+  Attempt: Integer;
+begin
+  Result := False;
+  HelperPath := ExpandConstant('{commonpf64}\chengjiangime\server\register-personal-watchdog.ps1');
+  SettingsPath := ExpandConstant('{commonpf64}\chengjiangime\server\ChengjiangImeSettings.exe');
+  if (not FileExists(HelperPath)) or (not FileExists(SettingsPath)) then
+    exit;
+  KeyboardKey := PersonalInteractiveSid + '\Control Panel\International\User Profile\zh-Hans-CN';
+  Params := '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + HelperPath +
+    '" -UserSid "' + PersonalInteractiveSid + '" -TaskName "Chengjiang IME Uninstall Cleanup C4548683" -Executable "' +
+    SettingsPath + '" -Arguments "--unregister-profile" -RunNow';
+  ResultCode := -1;
+  if Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), Params, '', SW_HIDE,
+    ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+  begin
+    for Attempt := 1 to 80 do
+    begin
+      if not RegKeyExists(HKU, KeyboardKey) then
+        break;
+      if not RegValueExists(HKU, KeyboardKey,
+        '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}') then
+      begin
+        Result := True;
+        break;
+      end;
+      Sleep(250);
+    end;
+  end;
+  Exec(ExpandConstant('{sys}\schtasks.exe'), '/Delete /F /TN "Chengjiang IME Uninstall Cleanup C4548683"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  KeyboardKey: String;
 begin
   if CurUninstallStep = usUninstall then
   begin
+    if not PersonalUninstallSameUser then
+    begin
+      KeyboardKey := PersonalInteractiveSid + '\Control Panel\International\User Profile\zh-Hans-CN';
+      if not RegKeyExists(HKU, KeyboardKey) then
+        RaiseException('无法确认当前用户的键盘列表，卸载已停止。');
+      if RegValueExists(HKU, KeyboardKey,
+        '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}') then
+        if not RemovePersonalKeyboardForInteractiveUser then
+          RaiseException('无法自动清理当前用户的个人版键盘。卸载已停止；请先在 Windows 语言设置中移除它，再重新卸载。');
+    end;
     if PersonalUninstallSameUser then
       RemovePersonalKeyboardForCurrentUser;
     ClearOurInputMethodOverride;

@@ -19,8 +19,8 @@ namespace input_method_install
 // missing afterwards, whether input.dll could not be loaded, the export was absent, or the call did not take.
 bool EnsureInKeyboardList();
 
-// Called first thing in wWinMain. Returns the exit code when the command line is --register-profile, otherwise -1 and
-// the settings window starts normally.
+// Called first thing in wWinMain. Handles --register-profile and --unregister-profile for the current user;
+// otherwise returns -1 and the settings window starts normally.
 int RunRegisterProfileIfRequested(const wchar_t *commandLine);
 
 } // namespace input_method_install

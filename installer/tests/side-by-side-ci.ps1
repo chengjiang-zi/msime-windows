@@ -206,6 +206,34 @@ if ([IO.File]::ReadAllText($translationFile) -ne $translationValue) {
 Assert-OriginalIntact $originalServer $originalProcess.Id
 if (-not (Is-KeyboardListed $personalProfile)) { throw 'Personal profile disappeared after upgrade.' }
 
+# Exercise the same interactive-user cleanup helper used by an uninstall
+# elevated through a different account, then restore the profile for the
+# remaining tests. No other profile is removed.
+$cleanupTask = 'ChengjiangImeCleanupTest-' + [Guid]::NewGuid().ToString('N')
+$helper = Join-Path (Split-Path -Parent $personalState.ServerPath) 'register-personal-watchdog.ps1'
+$settingsExe = Join-Path (Split-Path -Parent $personalState.ServerPath) 'ChengjiangImeSettings.exe'
+$windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+try {
+    & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $helper `
+        -UserSid ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value) -TaskName $cleanupTask `
+        -Executable $settingsExe -Arguments '--unregister-profile' -RunNow
+    if ($LASTEXITCODE -ne 0) { throw 'Could not start interactive-user cleanup task.' }
+    $deadline = [DateTime]::UtcNow.AddSeconds(25)
+    while ((Is-KeyboardListed $personalProfile) -and [DateTime]::UtcNow -lt $deadline) {
+        Start-Sleep -Milliseconds 250
+    }
+    if (Is-KeyboardListed $personalProfile) { throw 'Interactive-user cleanup did not remove the profile.' }
+    Assert-OriginalIntact $originalServer $originalProcess.Id
+    $restore = Start-Process -FilePath $settingsExe -ArgumentList '--register-profile' -WindowStyle Hidden -Wait -PassThru
+    if ($restore.ExitCode -ne 0 -or -not (Is-KeyboardListed $personalProfile)) {
+        throw 'Could not restore the personal profile after cleanup test.'
+    }
+} finally {
+    if (Get-ScheduledTask -TaskName $cleanupTask -ErrorAction SilentlyContinue) {
+        Unregister-ScheduledTask -TaskName $cleanupTask -Confirm:$false
+    }
+}
+
 # Both servers must be able to coexist. Probe the personal edition over its
 # actual named pipes while the upstream server remains alive.
 $personalProcess = Get-Process -Name 'ChengjiangImeServer' -ErrorAction SilentlyContinue | Select-Object -First 1

@@ -13,6 +13,7 @@ constexpr wchar_t kUserProfileKey[] = L"Control Panel\\International\\User Profi
 constexpr wchar_t kLanguage[] = L"zh-Hans-CN";
 // Used by the installer, which starts the settings program as the original user with this switch.
 constexpr wchar_t kRegisterProfileSwitch[] = L"--register-profile";
+constexpr wchar_t kUnregisterProfileSwitch[] = L"--unregister-profile";
 
 // The keyboard list keeps one value per input method under the language key, named after the profile and holding the
 // position. Reading the value back also proves the entry is the one Windows settings wrote: a stray string under the
@@ -33,20 +34,25 @@ bool AlreadyListed()
 
 } // namespace
 
-bool EnsureInKeyboardList()
+bool SetKeyboardListState(bool install)
 {
-    if (AlreadyListed())
+    if (AlreadyListed() == install)
         return true;
     // input.dll is not linked directly: the exports are documented for LoadLibrary and GetProcAddress only.
     HMODULE input = LoadLibraryExW(L"input.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (input == nullptr)
         return false;
     typedef BOOL(WINAPI * InstallLayoutOrTipFn)(LPCWSTR, DWORD);
-    const auto install = reinterpret_cast<InstallLayoutOrTipFn>(GetProcAddress(input, "InstallLayoutOrTip"));
-    const bool installed = install != nullptr && install(kProfileId, 0) != FALSE;
+    const auto change = reinterpret_cast<InstallLayoutOrTipFn>(GetProcAddress(input, "InstallLayoutOrTip"));
+    const bool changed = change != nullptr && change(kProfileId, install ? 0 : 1) != FALSE;
     FreeLibrary(input);
-    // Trust the keyboard list, not the return value: InstallLayoutOrTip reports success for profiles it then ignores.
-    return installed && AlreadyListed();
+    // Trust the keyboard list, not the return value: Windows may report success without applying the change.
+    return changed && AlreadyListed() == install;
+}
+
+bool EnsureInKeyboardList()
+{
+    return SetKeyboardListState(true);
 }
 
 int RunRegisterProfileIfRequested(const wchar_t *commandLine)
@@ -59,11 +65,12 @@ int RunRegisterProfileIfRequested(const wchar_t *commandLine)
     LPWSTR *argv = CommandLineToArgvW(commandLine, &argc);
     if (argv == nullptr)
         return -1;
-    const bool requested = argc == 1 && wcscmp(argv[0], kRegisterProfileSwitch) == 0;
+    const bool register_requested = argc == 1 && wcscmp(argv[0], kRegisterProfileSwitch) == 0;
+    const bool unregister_requested = argc == 1 && wcscmp(argv[0], kUnregisterProfileSwitch) == 0;
     LocalFree(argv);
-    if (!requested)
+    if (!register_requested && !unregister_requested)
         return -1;
-    return EnsureInKeyboardList() ? 0 : 1;
+    return SetKeyboardListState(register_requested) ? 0 : 1;
 }
 
 } // namespace input_method_install
