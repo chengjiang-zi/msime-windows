@@ -374,12 +374,11 @@ jobs:
           path: |
             ${{ steps.asset.outputs.installer_path }}
             ${{ runner.temp }}/dev-build.cer
-            installer/import-dev-trust.ps1
           if-no-files-found: error
-      # 免安装包与安装包共用同一次 Prepare-PackageFiles 产物，额外只花一次复制加压缩的工夫。
-      # 它解决的问题是「只想看一眼设置窗口」：安装包要管理员权限、装 TSF、导入证书，看界面
-      # 一样都用不上。两个产物各管一件事，谁也不替代谁。
+      # The inherited preview exposes actions that can affect Windows settings.
+      # Keep it disabled until those actions are audited for isolated preview use.
       - name: Package the settings window for a portable preview
+        if: ${{ false }} # Re-enable only after auditing all settings actions for preview mode.
         id: portable
         shell: pwsh
         env:
@@ -390,6 +389,7 @@ jobs:
           -TargetVersion $env:TARGET_VERSION
           -OutputDirectory "${{ runner.temp }}/portable"
       - name: Upload the portable settings window
+        if: ${{ false }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dev-settings-portable
@@ -401,7 +401,6 @@ jobs:
         env:
           TARGET_VERSION: ${{ steps.version.outputs.display }}
           INSTALLER_SHA256: ${{ steps.asset.outputs.installer_sha256 }}
-          PORTABLE_SIZE: ${{ steps.portable.outputs.portable_size }}
         run: |
           @(
             '### Dev build'
@@ -411,11 +410,6 @@ jobs:
             "| Version | $env:TARGET_VERSION |"
             "| Installer SHA256 | ``$env:INSTALLER_SHA256`` |"
             ''
-            'To install: download the artifact, unzip, then in an **admin** PowerShell run'
-            '`import-dev-trust.ps1` and launch the installer. Re-run the trust import for every'
-            'new build; the certificate is minted per run and the script replaces the old one.'
-            ''
-            "To just look at the settings window: download `dev-settings-portable` ($env:PORTABLE_SIZE MB),"
-            'unzip anywhere and double-click `run-settings.cmd`. No admin rights, no certificate, no'
-            'registry writes, and deleting the folder removes it.'
+            'This self-signed artifact is for disposable-VM isolation tests only. It is not a'
+            'release installer; interactive desktop and cross-account uninstall tests remain.'
           ) >> $env:GITHUB_STEP_SUMMARY

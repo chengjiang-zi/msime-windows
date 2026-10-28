@@ -14,7 +14,7 @@ param(
 #
 # 目录布局刻意与安装后的相对关系一致，这样程序内部的相对路径不用改：
 #
-#   MetasequoiaIME_Portable_v<版本>\
+#   ChengjiangIME_SettingsPreview_v<版本>\
 #     ChengjiangImeSettings.exe     设置窗口本体
 #     *.dll                          它链接的运行时（libcurl、sqlite3 等）
 #     assets\settings\...            侧栏图标、皮肤预览图
@@ -46,7 +46,7 @@ Assert-PathExists -LiteralPath $settingsExe -Description '设置窗口 Chengjian
 $settingsAssets = Join-Path $appDataDir 'assets\settings'
 Assert-PathExists -LiteralPath $settingsAssets -Description '设置窗口图片资源 assets\settings'
 
-$folderName = "MetasequoiaIME_Portable_v$TargetVersion"
+$folderName = "ChengjiangIME_SettingsPreview_v$TargetVersion"
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Split-Path -Parent $staging
 }
@@ -117,7 +117,7 @@ endlocal
 Set-Content -LiteralPath (Join-Path $stageOut 'run-settings.cmd') -Value $launcher -Encoding ascii
 
 $readme = @"
-水杉输入法 免安装预览包 v$TargetVersion
+水杉输入法个人版 设置预览包 v$TargetVersion
 
 这个压缩包只包含设置窗口，用来查看界面，不是可以输入中文的输入法。
 它不写注册表、不装 TSF、不需要管理员权限，也不需要导入任何证书。
@@ -129,16 +129,16 @@ $readme = @"
 
 两种启动方式
   run-settings.cmd          用包内的空白配置，改动不影响本机已装的版本
-  run-settings.cmd live     用本机已装版本的真实配置，能看出新界面在你自己的设置下是什么样
+  run-settings.cmd live     用本机已装个人版的真实配置，查看并修改个人版设置
 
 live 模式的注意事项
-  这个模式改的是你正式版的配置文件，删掉本目录不会自动恢复。
-  想留后路的话，先备份 %LOCALAPPDATA%\metasequoiaime\config.toml。
-  本机没装过正式版时，它会落到 %LOCALAPPDATA%\metasequoiaime；那里没有现成配置，
+  这个模式改的是你安装的个人版配置文件，删掉本目录不会自动恢复。
+  想留后路的话，先备份个人版实际数据目录下的 config.toml。
+  本机没装过个人版时，它会落到 %LOCALAPPDATA%\chengjiangime；那里没有现成配置，
   改动会保存失败，请改用默认模式。
   另外这个设置程序来自开发构建，没有正式版的签名证书。
 
-两种方式都会给设置程序一个独立的实例名，可以和已安装的正式版同时开着。
+两种方式都会给设置程序一个独立的实例名，可以和已安装的个人版同时开着。
 
 哪些能看到
   全部设置页面的界面与交互。隔离模式下改动写进本目录下的 data\config.toml。
@@ -146,7 +146,7 @@ live 模式的注意事项
 哪些看不到
   输入法本身的输入效果：候选窗、上屏、皮肤在真实输入时的样子。
   这些需要 TSF DLL 注册到系统里，免安装包做不到。
-  要完整体验请用同一构建产出的安装包。
+  安装包仍在并存验证阶段，不应在日常电脑上直接安装。
 
 如果打开后弹「设置保存失败」
   说明目录不可写（例如解压到了 Program Files）。换到普通目录再试。
