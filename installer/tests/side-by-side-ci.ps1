@@ -153,6 +153,21 @@ foreach ($view in @([Microsoft.Win32.RegistryView]::Registry64, [Microsoft.Win32
 }
 Assert-OriginalIntact $originalServer $originalProcess.Id
 
+# A damaged personal registry entry must not turn the next upgrade into a
+# migration from the upstream data directory.
+$tamperedLog = Join-Path $taskRoot 'tampered-previous-data.log'
+try {
+    Set-ItemProperty -LiteralPath $personalKey -Name DataDir -Value $originalData
+    $code = Run-Installer $PersonalInstaller $personalRoot $tamperedLog
+    if ($code -eq 0 -or -not (Test-Path -LiteralPath $tamperedLog -PathType Leaf) -or
+        (Get-Content -LiteralPath $tamperedLog -Raw) -notmatch '个人版原数据目录与原版') {
+        throw 'The installer did not reject the unsafe previous data path.'
+    }
+    Assert-OriginalIntact $originalServer $originalProcess.Id
+} finally {
+    Set-ItemProperty -LiteralPath $personalKey -Name DataDir -Value $personalData
+}
+
 # Both servers must be able to coexist. Probe the personal edition over its
 # actual named pipes while the upstream server remains alive.
 $personalProcess = Get-Process -Name 'ChengjiangImeServer' -ErrorAction SilentlyContinue | Select-Object -First 1

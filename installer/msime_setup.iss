@@ -1690,6 +1690,13 @@ begin
     Result := '数据目录 ' + GetDataDir('') + ' 不可用：' + DataDirProblem;
     exit;
   end;
+  { A stale or tampered personal registry value must not make migration read
+    from or delete the upstream directory, even when the new path is safe. }
+  if OverlapsUpstreamData(ResolvePreviousDataDir) then
+  begin
+    Result := '个人版原数据目录与原版水杉输入法重叠或无法安全确认，已停止安装。';
+    exit;
+  end;
 #ifndef LightPackage
   { 静默安装也必须在最终目录确定后、配置迁移前检查。}
   UserConfigExistedBeforeInstall := UserConfigExistsBeforeInstall;
