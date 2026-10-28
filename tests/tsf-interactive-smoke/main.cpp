@@ -490,6 +490,27 @@ int main(int argc, char **argv) {
     std::cout << "PASS: " << pageSize << " right keys select the first candidate on the next page.\n";
   }
   if (testMouseCaret) {
+    if (richEdit) {
+      // Compare the same control with committed text and no composition.
+      POINT baseline{9, 7};
+      ClientToScreen(edit, &baseline);
+      const HWND baselineHit = WindowFromPoint(baseline);
+      std::cout << "MOUSE_BASELINE_HIT_EDIT: " << (baselineHit == edit) << "\n";
+      if (baselineHit == edit && SetCursorPos(baseline.x, baseline.y)) {
+        INPUT click[2]{};
+        click[0].type = INPUT_MOUSE;
+        click[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+        click[1] = click[0];
+        click[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+        if (SendInput(1, &click[0], sizeof(INPUT)) != 1) return 1;
+        PumpFor(100);
+        std::cout << "MOUSE_BASELINE_AFTER_DOWN: " << (GetCapture() == edit) << "\n";
+        if (SendInput(1, &click[1], sizeof(INPUT)) != 1) return 1;
+        PumpFor(500);
+        std::cout << "MOUSE_BASELINE_AFTER_UP: " << (GetCapture() == edit) << "\n";
+        if (GetCapture() == edit) ReleaseCapture(); // Keep the later experiment independent.
+      }
+    }
     // Diagnostic only: inspect how a standard Edit host reacts to a real mouse
     // click inside its inline preedit. Do not treat unsupported hosts as pass.
     SetWindowTextW(edit, L"");
