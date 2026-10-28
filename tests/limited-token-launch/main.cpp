@@ -48,14 +48,32 @@ int wmain(int argc, wchar_t **argv) {
   label.Label.Attributes = SE_GROUP_INTEGRITY;
   if (!SetTokenInformation(limited, TokenIntegrityLevel, &label,
                            sizeof(label) + GetLengthSid(mediumBuffer))) return Fail("Set medium integrity");
-  TOKEN_ELEVATION elevation{};
-  DWORD returned = 0;
-  if (!GetTokenInformation(limited, TokenElevation, &elevation, sizeof(elevation), &returned)) return Fail("Query elevation");
-  if (elevation.TokenIsElevated) {
-    std::cerr << "Restricted token is still reported as elevated; test is inconclusive.\n";
+  DWORD labelBytes = 0;
+  GetTokenInformation(limited, TokenIntegrityLevel, nullptr, 0, &labelBytes);
+  std::vector<BYTE> labelData(labelBytes);
+  if (!labelBytes || !GetTokenInformation(limited, TokenIntegrityLevel, labelData.data(), labelBytes, &labelBytes))
+    return Fail("Query integrity");
+  const auto *actualLabel = reinterpret_cast<const TOKEN_MANDATORY_LABEL *>(labelData.data());
+  if (!EqualSid(actualLabel->Label.Sid, mediumBuffer)) {
+    std::cerr << "Token integrity is not medium.\n";
     CloseHandle(limited);
     return 1;
   }
+  TOKEN_ELEVATION elevation{};
+  DWORD returned = 0;
+  if (!GetTokenInformation(limited, TokenElevation, &elevation, sizeof(elevation), &returned)) return Fail("Query elevation");
+  HANDLE impersonation = nullptr;
+  if (!DuplicateToken(limited, SecurityIdentification, &impersonation)) return Fail("Duplicate impersonation token");
+  BOOL adminEnabled = TRUE;
+  const BOOL checked = CheckTokenMembership(impersonation, adminBuffer, &adminEnabled);
+  CloseHandle(impersonation);
+  if (!checked || adminEnabled) {
+    std::cerr << "Restricted token still has enabled administrator membership.\n";
+    CloseHandle(limited);
+    return 1;
+  }
+  std::cout << "Restricted token: medium integrity, administrator group disabled, elevation flag="
+            << elevation.TokenIsElevated << ".\n";
   std::wstring command;
   for (int index = 1; index < argc; ++index) {
     const std::wstring value = argv[index];
@@ -72,7 +90,7 @@ int wmain(int argc, wchar_t **argv) {
   const DWORD error = GetLastError();
   CloseHandle(limited);
   if (!started) { SetLastError(error); return Fail("CreateProcessWithTokenW"); }
-  std::cout << "PASS: launched with medium integrity and a non-elevated restricted token.\n";
+  std::cout << "PASS: launched with a medium-integrity restricted token.\n";
   const DWORD wait = WaitForSingleObject(process.hProcess, 360000);
   DWORD result = 1;
   if (wait == WAIT_OBJECT_0) GetExitCodeProcess(process.hProcess, &result);

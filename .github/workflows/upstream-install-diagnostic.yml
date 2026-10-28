@@ -87,7 +87,7 @@ jobs:
               ([IO.File]::ReadAllText($log).Contains('SKIP:'))) {
             throw "Restricted-token input did not complete successfully ($result)."
           }
-          Write-Host 'PASS: restricted non-elevated desktop token committed Chinese text without certificate trust.'
+          Write-Host 'PASS: medium-integrity token with disabled Administrators group committed Chinese text without certificate trust.'
   package-input:
     name: Retest input with a previously built package
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.package_run_id != '' }}
