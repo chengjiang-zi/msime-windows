@@ -1,4 +1,8 @@
-# Metasequoia IME for Windows
+# Personal edition (in development)
+
+This fork is based on [Metasequoia IME for Windows](https://github.com/metasequoiaime/msime-windows), with thanks to its original contributors. The personal edition is still being developed and does not yet have an installer intended for everyday use. Self-signed development builds are only for disposable test environments. The original project's links, badges, downloads and signing information below refer to upstream, not to this fork. See [the isolation notes](docs/personal-edition-isolation.md) for progress.
+
+## Metasequoia IME for Windows
 
 [中文 README](README.md) · [Website](https://msime.app) · [Docs](https://msime.app/docs/) · [Privacy](PRIVACY.md) · [Code signing policy](docs/code-signing-policy.md)
 

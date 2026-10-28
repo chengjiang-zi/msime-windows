@@ -102,7 +102,7 @@ Name: "{#MyTsfRoot64}\{code:GetVersionDir}"
 Name: "{commonpf64}\chengjiangime\server"
 ; 用户数据（词库、配置、皮肤、界面资源）。默认在 LocalAppData，安装时可以改到别的盘，
 ; 选择写进 HKLM 的 DataDir，Server / TSF DLL / 引擎三方都从那里读。
-Name: "{code:GetDataDir}"; Permissions: users-modify
+Name: "{code:GetDataDir}"
 ; 用户自己的辅助码方案放这里，Server 扫描后列进设置页，升级时保留。
 Name: "{code:GetDataDir}\helpcodes\custom"
 ; 用户自己的双拼方案（.toml）放这里，同样由 Server 扫描、升级时保留。
@@ -256,6 +256,8 @@ var
 
 #include "interactive_user.iss"
 #include "personal_watchdog_task.iss"
+#include "personal_postinstall_status.iss"
+#include "personal_data_permissions.iss"
 
 // VC 运行库不随包分发：它是系统级共享组件，安装器不该替用户装。缺了它 Server 直接
 // 起不来，而故障现场在安装结束之后，用户看不到任何解释，所以在安装开始前查一遍，
@@ -742,7 +744,7 @@ begin
     exit;
   end;
 
-  if (CurPageID = wpFinished) and (not WizardSilent) then
+  if (CurPageID = wpFinished) and (not WizardSilent) and PersonalPostInstallCompleted then
     LaunchInstalledComponents;
 end;
 
@@ -1087,7 +1089,6 @@ end;
 procedure EnsureImeUserDataDir;
 var
   AppDataPath: String;
-  ResultCode: Integer;
 begin
   // Elevated setup writes {localappdata} as high integrity. Medium-IL Server
   // and Settings cannot replace those files. Users who never rewrote config.toml
@@ -1097,23 +1098,9 @@ begin
   // Also required when the data directory sits on another volume: files the elevated setup
   // copied there inherit the parent's ACL, which may not let a Medium-IL Server write them.
   AppDataPath := GetDataDir('');
-  ForceDirectories(AppDataPath);
-  Exec(
-    ExpandConstant('{sys}\icacls.exe'),
-    '"' + AppDataPath + '" /grant *S-1-5-32-545:(OI)(CI)M /T /C /Q',
-    '',
-    SW_HIDE,
-    ewWaitUntilTerminated,
-    ResultCode
-  );
-  Exec(
-    ExpandConstant('{sys}\icacls.exe'),
-    '"' + AppDataPath + '" /setintegritylevel (OI)(CI)M /T /C /Q',
-    '',
-    SW_HIDE,
-    ewWaitUntilTerminated,
-    ResultCode
-  );
+  if not ForceDirectories(AppDataPath) or
+    not PersonalGrantDataAccess(AppDataPath, PersonalInteractiveSid) then
+    RaiseException('无法为当前用户设置个人版数据目录权限，请检查目录权限后重试。');
 end;
 
 procedure CreateWatchdogLogonTask;
@@ -1831,6 +1818,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);begin
   if CurStep = ssPostInstall then
   begin
+    PersonalPostInstallStarted := True;
     { 先打标记，再调整权限：之后的覆盖安装和卸载靠它判断这个目录是不是我们建的。}
     WriteDataDirMarker(GetDataDir(''), DataDirAdoptedEmpty);
 #ifndef LightPackage
@@ -1854,6 +1842,7 @@ procedure CurStepChanged(CurStep: TSetupStep);begin
     { TSF 的语言配置要以原用户身份装进键盘列表：提权进程的 HKCU 指向管理员账户，写进去当前用户
       看不到（见 server/src/settings/input_method_install.h）。放在最后，失败也不影响装好的文件。}
     RegisterProfileForUser;
+    PersonalPostInstallCompleted := True;
   end;
 end;
 

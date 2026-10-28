@@ -24,7 +24,7 @@ constexpr wchar_t kRecordValue[] = L"GameCompatProfileName";
 constexpr wchar_t kTipProfileKey[] = L"SOFTWARE\\Microsoft\\CTF\\TIP\\{56A47253-A7C1-53AC-9028-7297207BD972}"
                                      L"\\LanguageProfile\\0x00000804\\{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}";
 // TEXTSERVICE_DESC in windows/src/Register/Register.cpp: what the profile is called with the switch off.
-constexpr wchar_t kProductName[] = L"Metasequoia 水杉输入法";
+constexpr wchar_t kProductName[] = L"水杉输入法 · 个人版";
 
 enum ExitCode : int
 {

@@ -12,6 +12,8 @@ $probeRoot = Join-Path $env:PUBLIC $taskName
 $probeExe = Join-Path $probeRoot 'probe.exe'
 $probeResult = Join-Path $probeRoot 'result.txt'
 $probeLog = Join-Path $probeRoot 'probe.log'
+$dataDir = Join-Path $probeRoot 'private-data'
+$writeScript = Join-Path $probeRoot 'write-data.ps1'
 $createdUser = $false
 try {
     $password = ConvertTo-SecureString ([Guid]::NewGuid().ToString('N') + 'aA9!') -AsPlainText -Force
@@ -84,6 +86,43 @@ try {
     }
     if ($taskSid.Value -ne $user.SID.Value) { throw 'Inno task probe registered the wrong user.' }
     Write-Host 'PASS: Inno registered an interactive task for the standard user.'
+    # Start with a data directory inaccessible to ordinary users, as can happen
+    # when elevated Setup creates files under a custom location. Exercise the
+    # production ACL helper and then write the file as the standard account.
+    New-Item -ItemType Directory -Path $dataDir | Out-Null
+    & "$env:SystemRoot\System32\icacls.exe" $dataDir /inheritance:r /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not prepare private probe directory.' }
+    [IO.File]::WriteAllText((Join-Path $dataDir 'config.toml'), 'initial')
+    & $compiler '/Qp' "/O$build" (Join-Path $PSScriptRoot 'personal-data-permissions-probe.iss')
+    if ($LASTEXITCODE -ne 0) { throw 'Could not compile data permissions probe.' }
+    $aclResult = Join-Path $build 'acl-result.txt'
+    $aclProbe = Join-Path $build 'personal-data-permissions-probe.exe'
+    $process = Start-Process -FilePath $aclProbe -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES',
+        "/SID=$($user.SID.Value)", "/DATA=`"$dataDir`"", "/RESULT=`"$aclResult`"") `
+        -WindowStyle Hidden -Wait -PassThru
+    if (-not (Test-Path -LiteralPath $aclResult) -or [IO.File]::ReadAllText($aclResult).Trim() -ne 'granted') {
+        throw 'Data permissions helper did not grant access.'
+    }
+    Set-Content -LiteralPath $writeScript -Encoding ascii -Value (
+        '[IO.File]::WriteAllText((Join-Path $args[0] ''config.toml''), ''standard-user-write'')')
+    $credential = [Management.Automation.PSCredential]::new($account, $password)
+    $previousTemp = $env:TEMP
+    $previousTmp = $env:TMP
+    try {
+        $env:TEMP = $probeRoot
+        $env:TMP = $probeRoot
+        $process = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') `
+            -ArgumentList @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+                '-File', "`"$writeScript`"", "`"$dataDir`"") -Credential $credential -LoadUserProfile `
+            -WorkingDirectory $probeRoot -WindowStyle Hidden -Wait -PassThru
+    } finally {
+        $env:TEMP = $previousTemp
+        $env:TMP = $previousTmp
+    }
+    if ($process.ExitCode -ne 0 -or [IO.File]::ReadAllText((Join-Path $dataDir 'config.toml')) -ne 'standard-user-write') {
+        throw 'Standard user could not write the installed data file.'
+    }
+    Write-Host 'PASS: standard user can write data created by the administrator.'
     & $compiler '/Qp' "/O$build" (Join-Path $PSScriptRoot 'interactive-user-probe.iss')
     if ($LASTEXITCODE -ne 0) { throw 'Could not compile interactive user probe.' }
     Copy-Item -LiteralPath (Join-Path $build 'interactive-user-probe.exe') -Destination $probeExe
@@ -138,5 +177,12 @@ try {
     if (Test-Path -LiteralPath $probeExe) { Remove-Item -LiteralPath $probeExe -Force }
     if (Test-Path -LiteralPath $probeResult) { Remove-Item -LiteralPath $probeResult -Force }
     if (Test-Path -LiteralPath $probeLog) { Remove-Item -LiteralPath $probeLog -Force }
+    if (Test-Path -LiteralPath $writeScript) { Remove-Item -LiteralPath $writeScript -Force }
+    if (Test-Path -LiteralPath $dataDir) {
+        $resolvedData = (Resolve-Path -LiteralPath $dataDir).ProviderPath
+        $expectedData = [IO.Path]::GetFullPath((Join-Path $env:PUBLIC "$taskName\private-data"))
+        if ($resolvedData -ne $expectedData) { throw 'Refusing to clean an unexpected data path.' }
+        Remove-Item -LiteralPath $resolvedData -Recurse -Force
+    }
     if (Test-Path -LiteralPath $probeRoot) { Remove-Item -LiteralPath $probeRoot -Force -ErrorAction SilentlyContinue }
 }

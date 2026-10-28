@@ -1,4 +1,14 @@
-# 水杉输入法
+# 水杉输入法 · 个人版（开发中）
+
+这是基于 [水杉输入法 Windows 版](https://github.com/metasequoiaime/msime-windows)的个人改进版本，感谢原项目和贡献者。个人版计划改善翻译候选窗口的稳定性，并探索英文整句翻译和轻量单词学习。除已在代码或文档中说明的内容外，这些功能仍在设计或开发中。
+
+**目前没有可供日常使用的个人版安装包。** 独立并存安装正在一次性 Windows 环境中验证；开发构建使用自签名证书，仅用于隔离测试。请不要把上游发布包当成个人版安装包。进展与限制见[并存改造记录](docs/personal-edition-isolation.md)。
+
+已讨论的功能与当前状态见[个人版功能计划](docs/personal-roadmap.md)。
+
+以下保留上游项目的介绍与参考资料；其中官网、徽章、下载地址和签名说明均指上游项目，不代表本个人版的发布或签名状态。个人版遵循本仓库的 [GPL-3.0 协议](LICENSE)及其第三方许可。
+
+## 上游项目介绍
 
 [官网](https://msime.app) · [用户文档](https://msime.app/docs/) · [隐私说明](PRIVACY.md) · [代码签名策略 / Code signing policy](docs/code-signing-policy.md) · [English README](README.en.md)
 
