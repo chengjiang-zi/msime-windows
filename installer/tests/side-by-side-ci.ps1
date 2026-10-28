@@ -27,6 +27,8 @@ $originalKey = 'HKLM:\Software\Metasequoia\MetasequoiaIME'
 $personalKey = 'HKLM:\Software\Chengjiang\PersonalIME'
 $originalClsid = '{E3062E9A-D834-4637-8958-ED8CFA427D01}'
 $personalClsid = '{56A47253-A7C1-53AC-9028-7297207BD972}'
+$originalProfile = '0804:{E3062E9A-D834-4637-8958-ED8CFA427D01}{4D59B1B4-D503-44AE-9259-BAD9BB2778AB}'
+$personalProfile = '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}'
 $sentinelValue = 'upstream data must remain untouched'
 
 function Run-Installer([string]$File, [string]$DataDir, [string]$Log) {
@@ -45,6 +47,16 @@ function Get-RegisteredDll([string]$Clsid, [Microsoft.Win32.RegistryView]$View) 
     } finally { $base.Dispose() }
 }
 
+function Is-KeyboardListed([string]$Profile) {
+    $base = [Microsoft.Win32.RegistryKey]::OpenBaseKey(
+        [Microsoft.Win32.RegistryHive]::CurrentUser, [Microsoft.Win32.RegistryView]::Registry64)
+    try {
+        $key = $base.OpenSubKey('Control Panel\International\User Profile\zh-Hans-CN')
+        if (-not $key) { return $false }
+        try { return $null -ne $key.GetValue($Profile) } finally { $key.Dispose() }
+    } finally { $base.Dispose() }
+}
+
 function Assert-OriginalIntact([string]$ServerPath, [int]$ProcessId) {
     if ([IO.File]::ReadAllText($sentinel) -ne $sentinelValue) { throw 'Upstream data changed.' }
     $state = Get-ItemProperty -LiteralPath $originalKey
@@ -53,6 +65,7 @@ function Assert-OriginalIntact([string]$ServerPath, [int]$ProcessId) {
     }
     if (-not (Test-Path -LiteralPath $ServerPath -PathType Leaf)) { throw 'Upstream Server disappeared.' }
     if (-not (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) { throw 'Upstream Server was stopped.' }
+    if (-not (Is-KeyboardListed $originalProfile)) { throw 'Upstream keyboard profile disappeared.' }
     foreach ($view in @([Microsoft.Win32.RegistryView]::Registry64, [Microsoft.Win32.RegistryView]::Registry32)) {
         if ((Get-RegisteredDll $originalClsid $view) -notmatch '(?i)\\IME\\MetasequoiaIME\\') {
             throw "Upstream TSF registration changed in $view."
@@ -78,6 +91,14 @@ if ($certificate.Subject -ne 'CN=Chengjiang IME Personal Dev Build Code Signing'
 Import-Certificate -FilePath $DevCertificate -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
 Import-Certificate -FilePath $DevCertificate -CertStoreLocation 'Cert:\LocalMachine\TrustedPublisher' | Out-Null
 
+# The hosted image may start with only English in its user language list.
+# Add Simplified Chinese in this disposable VM so keyboard registration is real.
+$languages = Get-WinUserLanguageList
+if (-not ($languages | Where-Object { $_.LanguageTag -like 'zh-*' })) {
+    $languages.Add('zh-Hans-CN')
+    Set-WinUserLanguageList -LanguageList $languages -Force
+}
+
 $code = Run-Installer $baselineInstaller $originalData (Join-Path $taskRoot 'upstream.log')
 if ($code -ne 0) { throw "Upstream installation failed: $code" }
 $originalState = Get-ItemProperty -LiteralPath $originalKey
@@ -100,8 +121,13 @@ Assert-OriginalIntact $originalServer $originalProcess.Id
 
 # The personal installer must reject the upstream data path before it can stop
 # any process, migrate data or delete files.
-$blocked = Run-Installer $PersonalInstaller $originalData (Join-Path $taskRoot 'blocked.log')
+$blockedLog = Join-Path $taskRoot 'blocked.log'
+$blocked = Run-Installer $PersonalInstaller $originalData $blockedLog
 if ($blocked -eq 0) { throw 'Personal installer accepted the upstream data directory.' }
+if (-not (Test-Path -LiteralPath $blockedLog -PathType Leaf) -or
+    (Get-Content -LiteralPath $blockedLog -Raw) -notmatch '个人版数据目录不能与原版') {
+    throw 'The overlapping path did not fail for the expected isolation reason.'
+}
 Assert-OriginalIntact $originalServer $originalProcess.Id
 
 $code = Run-Installer $PersonalInstaller $personalData (Join-Path $taskRoot 'personal.log')
@@ -113,6 +139,7 @@ if ($personalState.DataDir -ne $personalData -or $personalState.ServerPath -notm
 if (-not (Test-Path -LiteralPath (Join-Path $personalData 'msime.db') -PathType Leaf)) {
     throw 'Personal dictionary was not generated.'
 }
+if (-not (Is-KeyboardListed $personalProfile)) { throw 'Personal keyboard profile was not added.' }
 foreach ($view in @([Microsoft.Win32.RegistryView]::Registry64, [Microsoft.Win32.RegistryView]::Registry32)) {
     if ((Get-RegisteredDll $personalClsid $view) -notmatch '(?i)\\IME\\ChengjiangIME\\') {
         throw "Personal TSF registration did not use the isolated directory in $view."
@@ -155,5 +182,11 @@ $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/VERYSILENT', '
     -WindowStyle Hidden -Wait -PassThru
 if ($uninstall.ExitCode -ne 0) { throw "Personal uninstall failed: $($uninstall.ExitCode)" }
 Assert-OriginalIntact $originalServer $originalProcess.Id
-if (Test-Path -LiteralPath $personalKey) { throw 'Personal registry entry remained after uninstall.' }
+if (Is-KeyboardListed $personalProfile) { throw 'Personal keyboard profile remained after uninstall.' }
+$remaining = Get-ItemProperty -LiteralPath $personalKey -ErrorAction SilentlyContinue
+if ($remaining) {
+    foreach ($name in @('DataDir', 'ServerPath', 'VersionDir', 'GameCompatProfileName')) {
+        if ($remaining.PSObject.Properties[$name]) { throw "Personal registry value remained after uninstall: $name" }
+    }
+}
 Write-Host 'Side-by-side install, overlap rejection and personal uninstall preserved the upstream IME.'
