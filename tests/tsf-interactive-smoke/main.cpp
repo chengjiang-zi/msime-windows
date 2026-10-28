@@ -73,7 +73,7 @@ public:
       *eaten = TRUE;
     } else if (consumeLeftClick && consumedDown_) {
       consumedDown_ = false;
-      *eaten = TRUE;
+      *eaten = consumeMouseUp ? TRUE : FALSE;
     }
     ++events;
     std::cout << "MOUSE_TRACKER_EVENT: edge=" << edge << " quadrant=" << quadrant
@@ -82,6 +82,7 @@ public:
   }
   unsigned events = 0;
   bool consumeLeftClick = false;
+  bool consumeMouseUp = true;
 
 private:
   ULONG references_ = 1;
@@ -257,11 +258,12 @@ int main(int argc, char **argv) {
                    argument != "--mouse-caret-richedit" &&
                    argument != "--mouse-caret-region" &&
                    argument != "--mouse-caret-region-keep" &&
-                   argument != "--mouse-caret-region-consume")) {
+                   argument != "--mouse-caret-region-consume" &&
+                   argument != "--mouse-caret-region-down")) {
     std::cerr << "Unexpected interactive smoke-test arguments.\n";
     return 1;
   }
-  const bool consumeClick = argument == "--mouse-caret-region-consume";
+  const bool consumeClick = argument == "--mouse-caret-region-consume" || argument == "--mouse-caret-region-down";
   const bool keepRegion = argument == "--mouse-caret-region-keep" || consumeClick;
   const bool testRegion = argument == "--mouse-caret-region" || keepRegion;
   const bool richEdit = argument == "--mouse-caret-richedit" || testRegion;
@@ -523,6 +525,7 @@ int main(int argc, char **argv) {
       std::cerr << "Could not capture the disposable mouse test window.\n";
     MouseTrackerRegistration mouseTracker;
     mouseTracker.probe->consumeLeftClick = consumeClick;
+    mouseTracker.probe->consumeMouseUp = argument != "--mouse-caret-region-down";
     const bool trackerAttached = richEdit &&
         AttachMouseTracker(mouseTracker.probe, &mouseTracker.tracker, &mouseTracker.cookie);
     CandidateRegionExperiment region;
