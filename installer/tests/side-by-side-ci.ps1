@@ -105,7 +105,12 @@ if (-not ($languages | Where-Object { $_.LanguageTag -like 'zh-*' })) {
 $code = Run-Installer $baselineInstaller $originalData (Join-Path $taskRoot 'upstream.log')
 if ($code -ne 0) { throw "Upstream installation failed: $code" }
 $originalState = Get-ItemProperty -LiteralPath $originalKey
-if ($originalState.DataDir -ne $originalData) { throw 'Unexpected upstream data path.' }
+if ($originalState.DataDir -ne $originalData) {
+    Write-Host "Expected upstream data path: $originalData"
+    Write-Host "Actual upstream data path: $($originalState.DataDir)"
+    Get-Content -LiteralPath (Join-Path $taskRoot 'upstream.log') | Select-Object -Last 100 | Write-Host
+    throw 'Unexpected upstream data path.'
+}
 $originalServer = $originalState.ServerPath
 if (-not (Test-Path -LiteralPath (Join-Path $originalData 'msime.db') -PathType Leaf)) {
     throw 'Upstream dictionary was not generated.'
