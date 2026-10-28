@@ -18,36 +18,48 @@ Get-Process -Name 'ChengjiangImeServer' -ErrorAction SilentlyContinue | Stop-Pro
 $state = Get-ItemProperty -LiteralPath 'HKLM:\Software\Chengjiang\PersonalIME'
 $configPath = Join-Path $state.DataDir 'config.toml'
 $config = [IO.File]::ReadAllText($configPath)
-$settings = @{
-    'candidate_translations' = 'true'
-    'candidate_window_layout' = '"vertical"'
-    'candidate_window_fit_content' = 'false'
-    'candidate_window_follow_cursor' = 'false'
-    'cloud_candidates' = 'false'
-}
-foreach ($entry in $settings.GetEnumerator()) {
-    $pattern = '(?m)^[ \t]*' + [regex]::Escape($entry.Key) + '[ \t]*=[ \t]*[^\r\n#]*'
-    if (-not [regex]::IsMatch($config, $pattern)) { throw "Missing smoke test setting: $($entry.Key)" }
-    $config = [regex]::Replace($config, $pattern, "$($entry.Key) = $($entry.Value)")
-}
-[IO.File]::WriteAllText($configPath, $config, [Text.UTF8Encoding]::new($false))
-$server = Start-Process -FilePath $state.ServerPath -ArgumentList '--watchdog-managed' `
-    -WorkingDirectory (Split-Path -Parent $state.ServerPath) -WindowStyle Hidden -PassThru
-Start-Sleep -Seconds 3
-$server.Refresh()
-if ($server.HasExited) { throw "Personal UI Server exited: $($server.ExitCode)" }
-
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $build = Join-Path $env:RUNNER_TEMP 'personal-tsf-interactive-smoke'
 cmake -S (Join-Path $repoRoot 'tests/tsf-interactive-smoke') -B $build -A x64
 if ($LASTEXITCODE -ne 0) { throw 'TSF smoke configuration failed.' }
 cmake --build $build --config Release --parallel
 if ($LASTEXITCODE -ne 0) { throw 'TSF smoke build failed.' }
-$env:CHENGJIANG_SMOKE_SCREENSHOT_DIR = Join-Path $env:RUNNER_TEMP 'personal-tsf-screenshots'
-New-Item -ItemType Directory -Path $env:CHENGJIANG_SMOKE_SCREENSHOT_DIR -Force | Out-Null
-& (Join-Path $build 'Release/personal-tsf-interactive-smoke.exe')
-if ($LASTEXITCODE -eq 77) {
-    Write-Host 'SKIP: focus was unavailable; no real-input test was performed.'
-} elseif ($LASTEXITCODE -ne 0) {
-    throw "Interactive TSF smoke failed: $LASTEXITCODE"
+foreach ($layout in @('vertical', 'horizontal')) {
+    Get-Process -Name 'ChengjiangImeServer' -ErrorAction SilentlyContinue | Stop-Process -Force
+    $settings = @{
+        'candidate_translations' = 'true'
+        'candidate_window_layout' = '"' + $layout + '"'
+        'candidate_window_fit_content' = 'false'
+        'candidate_window_follow_cursor' = 'false'
+        'candidate_horizontal_arrow_navigation' = 'true'
+        'paging_page_up_down' = 'true'
+        'page_size' = '6'
+        'cloud_candidates' = 'false'
+    }
+    $layoutConfig = $config
+    foreach ($entry in $settings.GetEnumerator()) {
+        $pattern = '(?m)^[ \t]*' + [regex]::Escape($entry.Key) + '[ \t]*=[ \t]*[^\r\n#]*'
+        if (-not [regex]::IsMatch($layoutConfig, $pattern)) { throw "Missing smoke test setting: $($entry.Key)" }
+        $layoutConfig = [regex]::Replace($layoutConfig, $pattern, "$($entry.Key) = $($entry.Value)")
+    }
+    # Keep the candidate order stable while comparing Page Down with six right
+    # presses; otherwise selecting the reference candidate can promote it.
+    $frequencyPattern = '(?m)(^\[frequency_adjustment\][ \t]*\r?\n(?:[^\[]*?)^mode[ \t]*=[ \t]*)[^\r\n#]*'
+    if (-not [regex]::IsMatch($layoutConfig, $frequencyPattern)) { throw 'Missing frequency mode.' }
+    $layoutConfig = [regex]::Replace($layoutConfig, $frequencyPattern, '${1}"disabled"')
+    [IO.File]::WriteAllText($configPath, $layoutConfig, [Text.UTF8Encoding]::new($false))
+    $server = Start-Process -FilePath $state.ServerPath -ArgumentList '--watchdog-managed' `
+        -WorkingDirectory (Split-Path -Parent $state.ServerPath) -WindowStyle Hidden -PassThru
+    Start-Sleep -Seconds 3
+    $server.Refresh()
+    if ($server.HasExited) { throw "Personal UI Server exited: $($server.ExitCode)" }
+    $env:CHENGJIANG_SMOKE_SCREENSHOT_DIR = Join-Path (Join-Path $env:RUNNER_TEMP 'personal-tsf-screenshots') $layout
+    New-Item -ItemType Directory -Path $env:CHENGJIANG_SMOKE_SCREENSHOT_DIR -Force | Out-Null
+    $arguments = if ($layout -eq 'horizontal') { @('--horizontal-navigation') } else { @() }
+    & (Join-Path $build 'Release/personal-tsf-interactive-smoke.exe') @arguments
+    if ($LASTEXITCODE -eq 77) {
+        Write-Host "SKIP: focus was unavailable for $layout; no real-input test was performed."
+    } elseif ($LASTEXITCODE -ne 0) {
+        throw "Interactive TSF smoke failed for $layout`: $LASTEXITCODE"
+    }
 }

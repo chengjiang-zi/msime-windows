@@ -113,7 +113,9 @@ bool CaptureCandidate(HWND window, HWND background, const wchar_t *name) {
 }
 } // namespace
 
-int main() {
+int main(int argc, char **argv) {
+  const bool testHorizontalNavigation =
+      argc == 2 && std::string(argv[1]) == "--horizontal-navigation";
   if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))
     return 1;
   HWND window = CreateWindowExW(0, L"STATIC", L"Personal IME interactive smoke",
@@ -248,12 +250,87 @@ int main() {
   for (const wchar_t *p = text; *p; ++p)
     hasCjk = hasCjk || (*p >= 0x4e00 && *p <= 0x9fff);
   std::wcout << L"Edit text after nihao + space: " << text << L"\n";
-  DestroyWindow(window);
-  CoUninitialize();
   if (!hasCjk) {
     std::cerr << "No Chinese text was committed.\n";
+    DestroyWindow(window);
+    CoUninitialize();
     return 1;
   }
+  if (testHorizontalNavigation) {
+    // Six candidates per page: six right presses should move from the first
+    // item to the first item on the next page, not commit the first item.
+    auto typeShi = [&]() {
+      SetWindowTextW(edit, L"");
+      for (const WORD key : {WORD('S'), WORD('H'), WORD('I')}) {
+        if (!SendKey(key))
+          return false;
+        PumpFor(250);
+      }
+      PumpFor(1500);
+      return true;
+    };
+    if (!typeShi() || !SendKey(VK_SPACE)) {
+      std::cerr << "Could not enter the first navigation reference.\n";
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    PumpFor(1000);
+    wchar_t first[256]{};
+    GetWindowTextW(edit, first, static_cast<int>(sizeof(first) / sizeof(first[0])));
+    if (!typeShi()) {
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    if (!SendKey(VK_NEXT)) {
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    PumpFor(1000);
+    if (!SendKey(VK_SPACE)) {
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    PumpFor(1000);
+    wchar_t nextPage[256]{};
+    GetWindowTextW(edit, nextPage, static_cast<int>(sizeof(nextPage) / sizeof(nextPage[0])));
+    if (!typeShi()) {
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    for (int i = 0; i < 6; ++i) {
+      if (!SendKey(VK_RIGHT)) {
+        DestroyWindow(window);
+        CoUninitialize();
+        return 1;
+      }
+      PumpFor(300);
+    }
+    if (!SendKey(VK_SPACE)) {
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    PumpFor(1000);
+    wchar_t moved[256]{};
+    GetWindowTextW(edit, moved, static_cast<int>(sizeof(moved) / sizeof(moved[0])));
+    std::wcout << L"First candidate: " << first << L"; next page: " << nextPage
+               << L"; after six right keys: " << moved << L"\n";
+    if (!*first || !*nextPage || !*moved || std::wstring(first) == nextPage ||
+        std::wstring(nextPage) != moved) {
+      std::cerr << "Horizontal navigation did not select the first candidate on the next page.\n";
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    std::cout << "PASS: six right keys select a different candidate across the page.\n";
+  }
+  DestroyWindow(window);
+  CoUninitialize();
   std::cout << "PASS: personal TSF committed Chinese text in a focused Edit "
                "control.\n";
   return 0;

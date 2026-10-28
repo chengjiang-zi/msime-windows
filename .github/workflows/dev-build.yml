@@ -375,7 +375,7 @@ jobs:
         with:
           name: personal-candidate-test-screenshots
           retention-days: 7
-          path: ${{ runner.temp }}/personal-tsf-screenshots/*.bmp
+          path: ${{ runner.temp }}/personal-tsf-screenshots/**/*.bmp
           if-no-files-found: ignore
       - name: Name the artifact and record its checksum
         id: asset
