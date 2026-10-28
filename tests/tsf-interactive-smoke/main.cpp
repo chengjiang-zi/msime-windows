@@ -114,12 +114,15 @@ bool CaptureCandidate(HWND window, HWND background, const wchar_t *name) {
 } // namespace
 
 int main(int argc, char **argv) {
-  if (argc > 2 || (argc == 2 && std::string(argv[1]) != "--horizontal-navigation")) {
+  const std::string argument = argc == 2 ? argv[1] : "";
+  if (argc > 2 || (argc == 2 && argument != "--horizontal-navigation=3" &&
+                   argument != "--horizontal-navigation=6" &&
+                   argument != "--horizontal-navigation=9")) {
     std::cerr << "Unexpected interactive smoke-test arguments.\n";
     return 1;
   }
-  const bool testHorizontalNavigation =
-      argc == 2 && std::string(argv[1]) == "--horizontal-navigation";
+  const bool testHorizontalNavigation = argc == 2;
+  const int pageSize = testHorizontalNavigation ? argument.back() - '0' : 0;
   if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))
     return 1;
   HWND window = CreateWindowExW(0, L"STATIC", L"Personal IME interactive smoke",
@@ -261,8 +264,8 @@ int main(int argc, char **argv) {
     return 1;
   }
   if (testHorizontalNavigation) {
-    // Six candidates per page: six right presses should move from the first
-    // item to the first item on the next page, not commit the first item.
+    // One right press per candidate should move from the first item to the
+    // first item on the next page, matching a direct Page Down.
     auto typeShi = [&]() {
       SetWindowTextW(edit, L"");
       for (const WORD key : {WORD('S'), WORD('H'), WORD('I')}) {
@@ -306,7 +309,7 @@ int main(int argc, char **argv) {
       CoUninitialize();
       return 1;
     }
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < pageSize; ++i) {
       if (!SendKey(VK_RIGHT)) {
         DestroyWindow(window);
         CoUninitialize();
@@ -323,7 +326,7 @@ int main(int argc, char **argv) {
     wchar_t moved[256]{};
     GetWindowTextW(edit, moved, static_cast<int>(sizeof(moved) / sizeof(moved[0])));
     std::wcout << L"First candidate: " << first << L"; next page: " << nextPage
-               << L"; after six right keys: " << moved << L"\n";
+               << L"; after right keys: " << moved << L"\n";
     if (!*first || !*nextPage || !*moved || std::wstring(first) == nextPage ||
         std::wstring(nextPage) != moved) {
       std::cerr << "Horizontal navigation did not select the first candidate on the next page.\n";
@@ -331,7 +334,7 @@ int main(int argc, char **argv) {
       CoUninitialize();
       return 1;
     }
-    std::cout << "PASS: six right keys select a different candidate across the page.\n";
+    std::cout << "PASS: " << pageSize << " right keys select the first candidate on the next page.\n";
   }
   DestroyWindow(window);
   CoUninitialize();

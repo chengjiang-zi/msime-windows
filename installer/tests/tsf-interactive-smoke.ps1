@@ -24,7 +24,15 @@ cmake -S (Join-Path $repoRoot 'tests/tsf-interactive-smoke') -B $build -A x64
 if ($LASTEXITCODE -ne 0) { throw 'TSF smoke configuration failed.' }
 cmake --build $build --config Release --parallel
 if ($LASTEXITCODE -ne 0) { throw 'TSF smoke build failed.' }
-foreach ($layout in @('vertical', 'horizontal')) {
+$scenarios = @(
+    @{ Name = 'vertical'; Layout = 'vertical'; PageSize = 6 }
+    @{ Name = 'horizontal-3'; Layout = 'horizontal'; PageSize = 3 }
+    @{ Name = 'horizontal-6'; Layout = 'horizontal'; PageSize = 6 }
+    @{ Name = 'horizontal-9'; Layout = 'horizontal'; PageSize = 9 }
+)
+foreach ($scenario in $scenarios) {
+    $layout = $scenario.Layout
+    $pageSize = $scenario.PageSize
     Get-Process -Name 'ChengjiangImeServer' -ErrorAction SilentlyContinue | Stop-Process -Force
     $settings = @{
         'candidate_translations' = 'true'
@@ -33,7 +41,7 @@ foreach ($layout in @('vertical', 'horizontal')) {
         'candidate_window_follow_cursor' = 'false'
         'candidate_horizontal_arrow_navigation' = 'true'
         'paging_page_up_down' = 'true'
-        'page_size' = '6'
+        'page_size' = [string]$pageSize
         'cloud_candidates' = 'false'
     }
     $layoutConfig = $config
@@ -42,7 +50,7 @@ foreach ($layout in @('vertical', 'horizontal')) {
         if (-not [regex]::IsMatch($layoutConfig, $pattern)) { throw "Missing smoke test setting: $($entry.Key)" }
         $layoutConfig = [regex]::Replace($layoutConfig, $pattern, "$($entry.Key) = $($entry.Value)")
     }
-    # Keep the candidate order stable while comparing Page Down with six right
+    # Keep the candidate order stable while comparing Page Down with right
     # presses; otherwise selecting the reference candidate can promote it.
     $frequencyPattern = '(?m)(^\[frequency_adjustment\][ \t]*\r?\n(?:[^\[]*?)^mode[ \t]*=[ \t]*)[^\r\n#]*'
     if (-not [regex]::IsMatch($layoutConfig, $frequencyPattern)) { throw 'Missing frequency mode.' }
@@ -53,19 +61,19 @@ foreach ($layout in @('vertical', 'horizontal')) {
     Start-Sleep -Seconds 3
     $server.Refresh()
     if ($server.HasExited) { throw "Personal UI Server exited: $($server.ExitCode)" }
-    $env:CHENGJIANG_SMOKE_SCREENSHOT_DIR = Join-Path (Join-Path $env:RUNNER_TEMP 'personal-tsf-screenshots') $layout
+    $env:CHENGJIANG_SMOKE_SCREENSHOT_DIR = Join-Path (Join-Path $env:RUNNER_TEMP 'personal-tsf-screenshots') $scenario.Name
     New-Item -ItemType Directory -Path $env:CHENGJIANG_SMOKE_SCREENSHOT_DIR -Force | Out-Null
     # Keep this an array even for one argument: splatting a bare string passes
     # its characters separately instead of the complete switch.
-    $arguments = @(if ($layout -eq 'horizontal') { '--horizontal-navigation' })
+    $arguments = @(if ($layout -eq 'horizontal') { "--horizontal-navigation=$pageSize" })
     & (Join-Path $build 'Release/personal-tsf-interactive-smoke.exe') @arguments |
         Tee-Object -Variable smokeLines | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -eq 77) {
-        Write-Host "SKIP: focus was unavailable for $layout; no real-input test was performed."
+        Write-Host "SKIP: focus was unavailable for $($scenario.Name); no real-input test was performed."
     } elseif ($LASTEXITCODE -ne 0) {
-        throw "Interactive TSF smoke failed for $layout`: $LASTEXITCODE"
+        throw "Interactive TSF smoke failed for $($scenario.Name): $LASTEXITCODE"
     } elseif ($layout -eq 'horizontal' -and
-              -not (($smokeLines -join "`n").Contains('PASS: six right keys'))) {
+              -not (($smokeLines -join "`n").Contains("PASS: $pageSize right keys"))) {
         throw 'The horizontal navigation scenario did not run.'
     }
 }
