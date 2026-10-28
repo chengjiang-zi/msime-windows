@@ -355,6 +355,9 @@ jobs:
       - name: Check whether the disposable desktop can receive input
         shell: pwsh
         run: pwsh -STA -File ./installer/tests/interactive-desktop-probe.ps1 -ResultPath "${{ runner.temp }}/desktop-probe.txt"
+      - name: Test personal input in a focused desktop control
+        shell: pwsh
+        run: ./installer/tests/tsf-interactive-smoke.ps1 -DesktopResult "${{ runner.temp }}/desktop-probe.txt"
       - name: Name the artifact and record its checksum
         id: asset
         shell: pwsh
