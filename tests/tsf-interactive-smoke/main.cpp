@@ -130,8 +130,10 @@ int main() {
   }
   ShowWindow(window, SW_MAXIMIZE);
   RECT client{};
-  if (!GetClientRect(window, &client) ||
-      !MoveWindow(edit, 10, 10, client.right - 20, client.bottom - 20, TRUE)) {
+  if (!GetClientRect(window, &client) || client.right <= 200 ||
+      client.bottom <= 160 ||
+      !MoveWindow(edit, 100, 80, client.right - 200, client.bottom - 160,
+                  TRUE)) {
     std::cerr << "Could not size the disposable test background.\n";
     DestroyWindow(window);
     CoUninitialize();
@@ -197,7 +199,7 @@ int main() {
     CoUninitialize();
     return 1;
   }
-  if (!CaptureCandidate(candidate, edit, L"candidate-before"))
+  if (!CaptureCandidate(candidate, window, L"candidate-before"))
     std::cerr << "Could not capture the candidate before backspace.\n";
   if (!SendKey(VK_BACK)) {
     std::cerr << "Could not inject the backspace key.\n";
@@ -214,7 +216,7 @@ int main() {
     CoUninitialize();
     return 1;
   }
-  if (!CaptureCandidate(candidate, edit, L"candidate-after"))
+  if (!CaptureCandidate(candidate, window, L"candidate-after"))
     std::cerr << "Could not capture the candidate after backspace.\n";
   std::cout << "Candidate bounds before backspace: " << before.left << ','
             << before.top << ' ' << before.right - before.left << 'x'
