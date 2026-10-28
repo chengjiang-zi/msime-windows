@@ -1,5 +1,15 @@
 #include "window/candidate_view_model.h"
+#include "window/candidate_stable_extent.h"
 #include "tests/includes/test_framework.h"
+
+TEST_CASE(candidate_stable_extent_keeps_size_until_reset_and_obeys_monitor_limits)
+{
+    REQUIRE_EQ(CandidateStableExtent(0.0f, 200.0f, 500.0f), 200.0f);
+    REQUIRE_EQ(CandidateStableExtent(200.0f, 120.0f, 500.0f), 200.0f);
+    REQUIRE_EQ(CandidateStableExtent(200.0f, 300.0f, 500.0f), 300.0f);
+    REQUIRE_EQ(CandidateStableExtent(300.0f, 120.0f, 180.0f), 180.0f);
+    REQUIRE_EQ(CandidateStableExtent(0.0f, 120.0f, 180.0f), 120.0f);
+}
 
 TEST_CASE(candidate_view_escapes_text_and_translation_without_turning_them_into_markup)
 {

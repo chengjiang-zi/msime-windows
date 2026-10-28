@@ -18,6 +18,7 @@
 #include "window/candidate_skin_palette.h"
 #include "window/candidate_skin_scene.h"
 #include "window/candidate_skin_tokens.h"
+#include "window/candidate_stable_extent.h"
 #include "window/candidate_wheel_paging.h"
 #include "window/ime_windows.h"
 
@@ -1013,7 +1014,9 @@ void CandidatePresenter::ShowFromGlobalState(POINT caret)
     // only when the natural size falls well below the kept one (a page that
     // really got smaller). Another keystroke, caret move or page turn is a
     // different page and starts from its natural size, as does Hide();
-    // carrying the old size over leaves blank rows at the bottom.
+    // carrying the old size over leaves blank rows at the bottom. When candidate
+    // translations are enabled, keep the largest size until Hide instead: text
+    // length changes while typing otherwise make translated candidates jump.
     if (impl_->card)
     {
         impl_->card->SetMinWidth(cardMinWidthDip_);
@@ -1022,9 +1025,13 @@ void CandidatePresenter::ShowFromGlobalState(POINT caret)
     layoutRoot();
     if (impl_->card)
     {
-        std::wstring stickyKey = GetPreeditWithCaretMarker();
-        stickyKey += L'#';
-        stickyKey += std::to_wstring(Global::candidate_ui.page_index);
+        const bool stabilizeTranslations = GetConfiguredCandidateTranslationsEnabled() && !fitContent_;
+        std::wstring stickyKey = stabilizeTranslations ? L"translation-session" : GetPreeditWithCaretMarker();
+        if (!stabilizeTranslations)
+        {
+            stickyKey += L'#';
+            stickyKey += std::to_wstring(Global::candidate_ui.page_index);
+        }
         // 展开与收起是两种尺寸，不能互相撑住。
         if (expanded_)
             stickyKey += L"#expanded";
@@ -1037,10 +1044,19 @@ void CandidatePresenter::ShowFromGlobalState(POINT caret)
         const msimeui::RectF natural = impl_->card->GetBounds();
         const float maxCardWidthDip = (std::max)(cardMinWidthDip_, maxW - kShadowPadLeft - kShadowPadRight);
         // fit_content 的卡片严格跟随文字宽度，只保留高度的只增不减。
-        stickyCardWidthDip_ = fitContent_
-                                  ? natural.width
-                                  : (std::min)(StickyCardExtent(stickyCardWidthDip_, natural.width), maxCardWidthDip);
-        stickyCardHeightDip_ = StickyCardExtent(stickyCardHeightDip_, natural.height);
+        if (stabilizeTranslations)
+        {
+            const float maxCardHeightDip = (std::max)(1.0f, maxH - kShadowPadTop - kShadowPadBottom);
+            stickyCardWidthDip_ = CandidateStableExtent(stickyCardWidthDip_, natural.width, maxCardWidthDip);
+            stickyCardHeightDip_ = CandidateStableExtent(stickyCardHeightDip_, natural.height, maxCardHeightDip);
+        }
+        else
+        {
+            stickyCardWidthDip_ =
+                fitContent_ ? natural.width
+                            : (std::min)(StickyCardExtent(stickyCardWidthDip_, natural.width), maxCardWidthDip);
+            stickyCardHeightDip_ = StickyCardExtent(stickyCardHeightDip_, natural.height);
+        }
         if (stickyCardWidthDip_ > natural.width + 0.5f || stickyCardHeightDip_ > natural.height + 0.5f)
         {
             impl_->card->SetMinWidth((std::max)(cardMinWidthDip_, stickyCardWidthDip_));

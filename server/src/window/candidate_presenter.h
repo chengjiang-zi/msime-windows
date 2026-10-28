@@ -96,8 +96,8 @@ class CandidatePresenter
     int lastHostHeightPx_ = 0;
     float lastLayoutWidthDip_ = 0.0f;
     float lastLayoutHeightDip_ = 0.0f;
-    // Largest card size kept for the current input (preedit + caret + page,
-    // stickyCardKey_); a new key or Hide() starts from the natural size.
+    // Largest card size kept for the current input. With translations enabled,
+    // keep it across keystrokes until Hide(); otherwise scope it to each page.
     std::wstring stickyCardKey_;
     float stickyCardWidthDip_ = 0.0f;
     float stickyCardHeightDip_ = 0.0f;
