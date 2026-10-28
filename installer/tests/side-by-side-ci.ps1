@@ -34,6 +34,7 @@ $personalProfile = '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55
 $sentinelValue = 'upstream data must remain untouched'
 
 function Run-Installer([string]$File, [string]$DataDir, [string]$Log) {
+    Write-Host "Starting installer $([IO.Path]::GetFileName($File)) with data directory $DataDir"
     $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART',
         "/DATADIR=`"$DataDir`"", "/LOG=`"$Log`"")
     $process = Start-Process -FilePath $File -ArgumentList $arguments -WindowStyle Hidden -PassThru
@@ -43,6 +44,7 @@ function Run-Installer([string]$File, [string]$DataDir, [string]$Log) {
         throw "Installer timed out: $File"
     }
     $process.Refresh()
+    Write-Host "Installer exited: $($process.ExitCode)"
     return $process.ExitCode
 }
 
