@@ -18,21 +18,21 @@ $ErrorActionPreference = 'Stop'
 
 $files = if ($Set -eq 'Payload') {
     @(
-        'server_exe/MetasequoiaImeServer.exe',
-        'server_exe/MetasequoiaImeWatchdog.exe',
-        'server_exe/MetasequoiaImeDictionaryReplay.exe',
-        'server_exe/MetasequoiaImeDictionaryBuild.exe',
-        'server_exe/MetasequoiaImeEmojiPanel.exe',
-        'server_exe/MetasequoiaImeKeyboardPanel.exe',
-        'server_exe/MetasequoiaImeHandwritingPanel.exe',
-        'server_exe/MetasequoiaImeSettings.exe',
+        'server_exe/ChengjiangImeServer.exe',
+        'server_exe/ChengjiangImeWatchdog.exe',
+        'server_exe/ChengjiangImeDictionaryReplay.exe',
+        'server_exe/ChengjiangImeDictionaryBuild.exe',
+        'server_exe/ChengjiangImeEmojiPanel.exe',
+        'server_exe/ChengjiangImeKeyboardPanel.exe',
+        'server_exe/ChengjiangImeHandwritingPanel.exe',
+        'server_exe/ChengjiangImeSettings.exe',
         'tsf_dll/32/MetasequoiaImeTsf.dll',
         'tsf_dll/64/MetasequoiaImeTsf.dll'
     )
 }
 else {
     if (-not $Version) { throw 'The installer set needs -Version.' }
-    @("Output/MetasequoiaIME_Setup_v$Version.exe")
+    @("Output/ChengjiangIME_Setup_v$Version.exe")
 }
 
 if ($Mode -eq 'Stage') {

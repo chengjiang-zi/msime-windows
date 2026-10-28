@@ -15,7 +15,7 @@ constexpr wchar_t kApplySwitch[] = L"--apply-game-compat-name";
 constexpr wchar_t kClearSwitch[] = L"--clear-game-compat-name";
 
 // Read by windows/src/Register/Register.cpp at registration time; keep the two in step.
-constexpr wchar_t kRecordKey[] = L"Software\\Metasequoia\\MetasequoiaIME";
+constexpr wchar_t kRecordKey[] = L"Software\\Chengjiang\\PersonalIME";
 constexpr wchar_t kRecordValue[] = L"GameCompatProfileName";
 // Where windows/src/Register/Register.cpp registers the profile, and the only place a TSF profile name lives:
 // GetLanguageProfileDescription and the language bar read Display Description if the key has one and Description

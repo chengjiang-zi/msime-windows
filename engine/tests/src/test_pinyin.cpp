@@ -103,7 +103,7 @@ class ScopedLocalAppDataOverride
     }
 
   private:
-    static constexpr const wchar_t *kDataDirectoryVariable = L"METASEQUOIA_IME_DATA_DIR";
+    static constexpr const wchar_t *kDataDirectoryVariable = L"CHENGJIANG_IME_DATA_DIR";
 
     std::wstring original_;
     fs::path root_;

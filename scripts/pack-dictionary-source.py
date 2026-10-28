@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """把构建好的词库（MetasequoiaImeDict/out/ 下的 msime.db、english.db、others.db、dict_japanese.dat）导出成
-安装时由 MetasequoiaImeDictionaryBuild.exe 还原的文本源。
+安装时由 ChengjiangImeDictionaryBuild.exe 还原的文本源。
 
 SQLite 的页结构和索引压缩率很差，同样的内容按行写成文本，安装包里能小一大截。这里只做机械导出，
 不重新解释数据：拼音去调、权重默认值、纠错这些规则仍然只在 build-dictionary.py 里。

@@ -65,6 +65,89 @@ class PersonalIdentityTests(unittest.TestCase):
         values = [guid_initializer(source, name) for name in names]
         self.assertEqual(len(set(values)), len(values))
 
+    def test_server_client_and_installer_use_separate_runtime_names(self):
+        client = read("windows/src/IME/MetasequoiaIME.cpp")
+        server = read("server/src/main.cpp")
+        installer = read("installer/msime_setup.iss")
+        self.assertIn("ChengjiangImeServer_SingleInstance", client)
+        self.assertIn("ChengjiangImeServer_SingleInstance", server)
+        self.assertIn("ChengjiangImeServer.Launch", client)
+        self.assertIn("ChengjiangImeServer.Launch", installer)
+        self.assertNotIn("MetasequoiaImeServer_SingleInstance", client + server)
+        self.assertNotIn("MetasequoiaImeServer.Launch", client + installer)
+
+    def test_configuration_mutex_matches_clipboard_helper(self):
+        config = read("server/src/config/ime_config_internal.h")
+        clipboard = read("server/src/clipboard/clipboard_history.cpp")
+        self.assertIn("ChengjiangIme.ConfigFile", config)
+        self.assertIn("ChengjiangIme.ConfigFile", clipboard)
+        self.assertNotIn("MetasequoiaIme.ConfigFile", config + clipboard)
+
+    def test_settings_and_candidate_window_names_are_isolated(self):
+        launcher = read("server/src/settings/settings_launcher.cpp")
+        settings = read("server/src/settings/settings_app.cpp")
+        installer = read("installer/msime_setup.iss")
+        self.assertIn("ChengjiangImeSettingsWindow", launcher)
+        self.assertIn("ChengjiangImeSettingsWindow", settings)
+        self.assertIn("ChengjiangImeSettingsWindow", installer)
+        self.assertNotIn("MetasequoiaImeSettingsWindow", launcher + settings + installer)
+        for path in (
+            "server/src/window/ime_windows.h",
+            "server/src/config/ime_config_write.cpp",
+            "server/src/settings/dictionary_manager.cpp",
+        ):
+            with self.subTest(path=path):
+                source = read(path)
+                self.assertIn("chengjiangime_windows", source)
+                self.assertNotIn("metasequoiaime_windows", source)
+
+    def test_installer_only_stops_personal_executable_names(self):
+        installer = read("installer/msime_setup.iss")
+        cmake = read("server/CMakeLists.txt")
+        for suffix in ("Server", "Watchdog", "Settings", "EmojiPanel", "KeyboardPanel", "HandwritingPanel"):
+            with self.subTest(executable=suffix):
+                personal = f"ChengjiangIme{suffix}"
+                self.assertIn(personal + ".exe", installer)
+                self.assertIn('OUTPUT_NAME "' + personal + '"', cmake)
+                self.assertNotIn("MetasequoiaIme" + suffix + ".exe", installer)
+
+    def test_runtime_data_directories_and_registry_are_separate(self):
+        for path in (
+            "windows/src/Utils/FanyUtils.cpp",
+            "server/src/utils/ime_paths.cpp",
+            "engine/core/data_path.h",
+        ):
+            with self.subTest(path=path):
+                source = read(path)
+                self.assertIn('L"chengjiangime"', source)
+                self.assertIn("CHENGJIANG_IME_DATA_DIR", source)
+                self.assertIn(r"Software\\Chengjiang\\PersonalIME", source)
+                self.assertNotIn(r"Software\\Metasequoia\\MetasequoiaIME", source)
+        installer = read("installer/msime_setup.iss")
+        self.assertIn("AppId={{C4548683-2C88-54A9-A7AE-CD6008F8154C}", installer)
+        self.assertNotIn("AppId={{A7C3E91F-4B2D-4E8A-9F1C-6D5E8B0A2C4D}", installer)
+        self.assertIn("{localappdata}\\chengjiangime", installer)
+        self.assertIn("{commonpf64}\\chengjiangime", installer)
+        self.assertIn("IME\\ChengjiangIME", installer)
+        self.assertNotIn("TryDeleteTree(ExpandConstant('{localappdata}\\metasequoiaime", installer)
+        self.assertNotIn("TryDeleteTree(ExpandConstant('{commonappdata}\\metasequoiaime", installer)
+
+    def test_development_certificate_identity_does_not_match_upstream(self):
+        signer = read("installer/sign-dev-build.ps1")
+        importer = read("installer/import-dev-trust.ps1")
+        personal = "CN=Chengjiang IME Personal Dev Build Code Signing"
+        upstream = "CN=Metasequoia IME Dev Build Code Signing"
+        self.assertIn(personal, signer)
+        self.assertIn(personal, importer)
+        self.assertNotIn(upstream, signer + importer)
+
+    def test_upstream_updater_is_disabled_for_personal_edition(self):
+        main = read("server/src/main.cpp")
+        about = read("server/src/settings/native/native_page_about.cpp")
+        self.assertNotIn("update_check::StartPolling()", main)
+        self.assertIn("constexpr bool kPersonalUpdatesEnabled = false", about)
+        self.assertIn("SetDisabled(!kPersonalUpdatesEnabled)", about)
+
 
 if __name__ == "__main__":
     unittest.main()

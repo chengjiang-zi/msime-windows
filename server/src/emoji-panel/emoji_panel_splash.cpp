@@ -18,7 +18,7 @@ using Microsoft::WRL::ComPtr;
 
 namespace
 {
-constexpr wchar_t kSplashClass[] = L"MetasequoiaImeEmojiPanelSplash";
+constexpr wchar_t kSplashClass[] = L"ChengjiangImeEmojiPanelSplash";
 constexpr UINT_PTR kAnimTimer = 1;
 constexpr UINT kAnimIntervalMs = 16;
 constexpr float kSpinnerRadiusDip = 18.0f;

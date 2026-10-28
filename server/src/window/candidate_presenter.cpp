@@ -206,7 +206,7 @@ bool CandidatePresenter::Bind(HWND hwnd)
     };
     callbacks.gridItemActivated = [this](size_t index) { CommitExpandedItem(index); };
     impl_->scene = CandidateSkinScene(std::move(callbacks));
-    impl_->window = std::make_unique<msimeui::Window>(L"metasequoiaime_windows", L"cand", 1, 1);
+    impl_->window = std::make_unique<msimeui::Window>(L"chengjiangime_windows", L"cand", 1, 1);
     impl_->window->AdoptExistingHwnd(hwnd);
     impl_->window->SetStealFocusOnClick(false);
     bound_ = impl_->resources.EnsureForComposition(hwnd);

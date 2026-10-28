@@ -15,7 +15,7 @@
 
 namespace
 {
-constexpr wchar_t kWindowClassName[] = L"msimeui.EmojiPanel";
+constexpr wchar_t kWindowClassName[] = L"chengjiangui.EmojiPanel";
 
 void ApplyHostChrome(HWND hwnd, bool lightTheme)
 {
@@ -48,7 +48,7 @@ void ActivateExistingInstance()
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int nCmdShow)
 {
-    CommonUtils::SingleInstanceGuard single_instance(L"Local\\MetasequoiaImeEmojiPanel.SingleInstance");
+    CommonUtils::SingleInstanceGuard single_instance(L"Local\\ChengjiangImeEmojiPanel.SingleInstance");
     if (!single_instance.is_valid())
     {
         return -1;

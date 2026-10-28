@@ -19,7 +19,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$CertificateSubject = 'CN=Metasequoia IME Dev Build Code Signing'
+$CertificateSubject = 'CN=Chengjiang IME Personal Dev Build Code Signing'
 
 function Find-SignTool {
     $kitsBin = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
@@ -73,7 +73,7 @@ function New-RunCertificate {
     $certificate = New-SelfSignedCertificate `
         -Type CodeSigningCert `
         -Subject $CertificateSubject `
-        -FriendlyName 'Metasequoia IME Dev Build Code Signing' `
+        -FriendlyName 'Chengjiang IME Personal Dev Build Code Signing' `
         -KeyAlgorithm RSA `
         -KeyLength 3072 `
         -HashAlgorithm SHA256 `

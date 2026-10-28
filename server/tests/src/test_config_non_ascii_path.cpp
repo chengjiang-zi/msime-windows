@@ -44,14 +44,14 @@ class ScopedEnv
 // LOCALAPPDATA alone no longer decides where the config lives: an installed product records its
 // data directory in HKLM, which outranks the profile. Pin the config directory explicitly so these
 // cases stay isolated on a machine that has the IME installed. The provider registry store
-// (ai_providers.json) resolves through METASEQUOIA_IME_DATA_DIR and needs the same pin.
+// (ai_providers.json) resolves through CHENGJIANG_IME_DATA_DIR and needs the same pin.
 class ScopedConfigLocation
 {
   public:
     explicit ScopedConfigLocation(const std::filesystem::path &local_app_data)
         : local_app_data_(L"LOCALAPPDATA", local_app_data.wstring()),
-          config_dir_(L"METASEQUOIA_IME_CONFIG_DIR", (local_app_data / L"metasequoiaime").wstring()),
-          data_dir_(L"METASEQUOIA_IME_DATA_DIR", (local_app_data / L"metasequoiaime").wstring())
+          config_dir_(L"CHENGJIANG_IME_CONFIG_DIR", (local_app_data / L"chengjiangime").wstring()),
+          data_dir_(L"CHENGJIANG_IME_DATA_DIR", (local_app_data / L"chengjiangime").wstring())
     {
     }
 
@@ -95,7 +95,7 @@ TEST_CASE(config_round_trips_under_non_ascii_profile_path)
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot();
     const fs::path local_app_data = unique_root / L"本地";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -196,7 +196,7 @@ TEST_CASE(candidate_translation_show_pos_defaults_and_round_trips)
 {
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"translation-pos";
-    const fs::path data_dir = unique_root / L"metasequoiaime";
+    const fs::path data_dir = unique_root / L"chengjiangime";
     const fs::path config_path = data_dir / L"config.toml";
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -247,7 +247,7 @@ TEST_CASE(candidate_translation_single_sense_defaults_and_round_trips)
 {
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"translation-single-sense";
-    const fs::path data_dir = unique_root / L"metasequoiaime";
+    const fs::path data_dir = unique_root / L"chengjiangime";
     const fs::path config_path = data_dir / L"config.toml";
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -287,7 +287,7 @@ TEST_CASE(english_first_page_count_defaults_validates_and_round_trips)
 {
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"english-first-page";
-    const fs::path data_dir = unique_root / L"metasequoiaime";
+    const fs::path data_dir = unique_root / L"chengjiangime";
     const fs::path config_path = data_dir / L"config.toml";
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -337,7 +337,7 @@ TEST_CASE(config_reload_detects_a_change_that_keeps_the_same_timestamp)
 {
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"reload-same-timestamp";
-    const fs::path data_dir = unique_root / L"metasequoiaime";
+    const fs::path data_dir = unique_root / L"chengjiangime";
     const fs::path config_path = data_dir / L"config.toml";
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -373,7 +373,7 @@ TEST_CASE(trilingual_runtime_language_preserves_preferences_without_writing_conf
 {
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"trilingual";
-    const fs::path data_dir = unique_root / L"metasequoiaime";
+    const fs::path data_dir = unique_root / L"chengjiangime";
     std::error_code ec;
     fs::remove_all(unique_root, ec);
     SeedTemplate(data_dir);
@@ -499,7 +499,7 @@ TEST_CASE(ai_provider_configuration_round_trips_without_mixing_credentials)
 {
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"ai-providers";
-    const fs::path data_dir = unique_root / L"metasequoiaime";
+    const fs::path data_dir = unique_root / L"chengjiangime";
     std::error_code ec;
     fs::remove_all(unique_root, ec);
     SeedTemplate(data_dir);
@@ -583,7 +583,7 @@ TEST_CASE(ai_provider_default_values_are_not_pinned_into_slots)
 {
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"ai-provider-defaults";
-    const fs::path data_dir = unique_root / L"metasequoiaime";
+    const fs::path data_dir = unique_root / L"chengjiangime";
     std::error_code ec;
     fs::remove_all(unique_root, ec);
     SeedTemplate(data_dir);
@@ -629,7 +629,7 @@ TEST_CASE(ai_provider_retired_default_model_follows_new_default)
 {
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"ai-provider-retired";
-    const fs::path data_dir = unique_root / L"metasequoiaime";
+    const fs::path data_dir = unique_root / L"chengjiangime";
     std::error_code ec;
     fs::remove_all(unique_root, ec);
     SeedTemplate(data_dir);
@@ -653,7 +653,7 @@ TEST_CASE(translation_provider_migrates_from_legacy_enabled_flags)
 {
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"translation-provider";
-    const fs::path data_dir = unique_root / L"metasequoiaime";
+    const fs::path data_dir = unique_root / L"chengjiangime";
     std::error_code ec;
     fs::remove_all(unique_root, ec);
     SeedTemplate(data_dir);
@@ -729,7 +729,7 @@ TEST_CASE(translation_provider_migration_keeps_tencent_gate)
 {
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"translation-tencent-gate";
-    const fs::path data_dir = unique_root / L"metasequoiaime";
+    const fs::path data_dir = unique_root / L"chengjiangime";
     std::error_code ec;
     fs::remove_all(unique_root, ec);
     SeedTemplate(data_dir);
@@ -755,7 +755,7 @@ TEST_CASE(config_recovers_unparseable_file_and_saves)
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"损坏";
     const fs::path local_app_data = unique_root / L"本地";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -779,7 +779,7 @@ TEST_CASE(config_overwrites_readonly_file)
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"只读";
     const fs::path local_app_data = unique_root / L"本地";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -803,7 +803,7 @@ TEST_CASE(config_migrates_legacy_acp_mangled_path)
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"遗留";
     const fs::path local_app_data = unique_root / L"本地";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -857,7 +857,7 @@ TEST_CASE(quanpin_autocorrect_keys_persist_and_legacy_key_stays_ignored)
     namespace fs = std::filesystem;
     const fs::path unique_root = test::TempRoot() / (L"msime-纠错配置测试-" + std::to_wstring(GetCurrentProcessId()));
     const fs::path local_app_data = unique_root / L"profile";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -910,7 +910,7 @@ TEST_CASE(quanpin_autocorrect_deletion_and_insertion_keys_persist_independently)
     const fs::path unique_root =
         test::TempRoot() / (L"msime-纠错拆分开关测试-" + std::to_wstring(GetCurrentProcessId()));
     const fs::path local_app_data = unique_root / L"profile";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1019,7 +1019,7 @@ TEST_CASE(fuzzy_pinyin_rules_default_to_all_off)
     namespace fs = std::filesystem;
     const fs::path unique_root = test::TempRoot() / (L"msime-模糊音默认测试-" + std::to_wstring(GetCurrentProcessId()));
     const fs::path local_app_data = unique_root / L"profile";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1073,7 +1073,7 @@ TEST_CASE(fuzzy_pinyin_rule_keys_round_trip)
     namespace fs = std::filesystem;
     const fs::path unique_root = test::TempRoot() / (L"msime-模糊音往返测试-" + std::to_wstring(GetCurrentProcessId()));
     const fs::path local_app_data = unique_root / L"profile";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1120,7 +1120,7 @@ TEST_CASE(fuzzy_pinyin_master_switch_gates_aggregate_only)
     namespace fs = std::filesystem;
     const fs::path unique_root = test::TempRoot() / (L"msime-模糊音门控测试-" + std::to_wstring(GetCurrentProcessId()));
     const fs::path local_app_data = unique_root / L"profile";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1168,7 +1168,7 @@ TEST_CASE(fuzzy_pinyin_first_enable_seeds_rules_once)
     namespace fs = std::filesystem;
     const fs::path unique_root = test::TempRoot() / (L"msime-模糊音播种测试-" + std::to_wstring(GetCurrentProcessId()));
     const fs::path local_app_data = unique_root / L"profile";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1252,7 +1252,7 @@ TEST_CASE(smart_punctuation_conversion_keys_default_and_round_trip)
     namespace fs = std::filesystem;
     const fs::path unique_root = test::TempRoot() / (L"msime-智能标点测试-" + std::to_wstring(GetCurrentProcessId()));
     const fs::path local_app_data = unique_root / L"profile";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1351,7 +1351,7 @@ TEST_CASE(enumeration_comma_keys_default_and_keep_at_least_one)
     namespace fs = std::filesystem;
     const fs::path unique_root = test::TempRoot() / (L"msime-顿号键测试-" + std::to_wstring(GetCurrentProcessId()));
     const fs::path local_app_data = unique_root / L"profile";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1407,7 +1407,7 @@ TEST_CASE(statistics_enabled_defaults_off_and_round_trips)
     namespace fs = std::filesystem;
     const fs::path unique_root = test::TempRoot() / (L"msime-统计开关测试-" + std::to_wstring(GetCurrentProcessId()));
     const fs::path local_app_data = unique_root / L"profile";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1479,7 +1479,7 @@ TEST_CASE(statistics_retention_defaults_forever_and_round_trips)
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot();
     const fs::path local_app_data = unique_root / L"本地";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1555,7 +1555,7 @@ TEST_CASE(settings_window_linger_defaults_off_and_round_trips)
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot();
     const fs::path local_app_data = unique_root / L"本地";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1607,7 +1607,7 @@ TEST_CASE(settings_launch_animation_defaults_on_and_round_trips)
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot();
     const fs::path local_app_data = unique_root / L"本地";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1661,7 +1661,7 @@ TEST_CASE(floating_toolbar_auto_hide_defaults_and_round_trips)
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot();
     const fs::path local_app_data = unique_root / L"本地";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1716,7 +1716,7 @@ TEST_CASE(deepseek_thinking_levels_default_disabled_and_round_trip)
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot();
     const fs::path local_app_data = unique_root / L"本地";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
 
     std::error_code ec;
     fs::remove_all(unique_root, ec);
@@ -1774,7 +1774,7 @@ TEST_CASE(credentials_are_stored_encrypted_and_plaintext_is_migrated)
     namespace fs = std::filesystem;
     const fs::path unique_root = MakeProfileRoot() / L"凭证";
     const fs::path local_app_data = unique_root / L"本地";
-    const fs::path data_dir = local_app_data / L"metasequoiaime";
+    const fs::path data_dir = local_app_data / L"chengjiangime";
     const fs::path config_path = data_dir / L"config.toml";
 
     std::error_code ec;

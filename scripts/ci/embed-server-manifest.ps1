@@ -12,7 +12,7 @@ Set-StrictMode -Version Latest
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $buildRoot = (Resolve-Path (Join-Path $repoRoot $BuildDir)).Path
-$binary = Join-Path $buildRoot 'MetasequoiaImeServer.exe'
+$binary = Join-Path $buildRoot 'ChengjiangImeServer.exe'
 $manifest = (Resolve-Path (Join-Path $repoRoot $ManifestPath)).Path
 
 if (-not (Test-Path -LiteralPath $binary -PathType Leaf)) {

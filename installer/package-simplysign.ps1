@@ -176,7 +176,7 @@ function Invoke-SimplySign {
     }
 }
 
-# 包内所有随安装包落到用户磁盘上的 EXE/DLL。只签 MetasequoiaImeServer.exe 是不够的：
+# 包内所有随安装包落到用户磁盘上的 EXE/DLL。只签 ChengjiangImeServer.exe 是不够的：
 # 未签名的辅助进程（设置页、表情面板、看门狗等）和随包分发的 DLL 会被 Microsoft Defender
 # 的 SmartScreen/信誉判定拦下，而它们是用户实际会启动的程序。
 function Get-PayloadBinaryPaths {
@@ -231,9 +231,9 @@ $tsfResourcePath = Join-Path $repoRoot 'windows\src\IME\MetasequoiaIME.rc'
 $originalIss = [IO.File]::ReadAllBytes($issPath)
 $originalTsfResource = [IO.File]::ReadAllBytes($tsfResourcePath)
 $lightSuffix = if ($Light) { '_light' } else { '' }
-$compiledInstallerPath = Join-Path $PSScriptRoot "Output\MetasequoiaIME_Setup_v$Version$lightSuffix.exe"
+$compiledInstallerPath = Join-Path $PSScriptRoot "Output\ChengjiangIME_Setup_v$Version$lightSuffix.exe"
 $installerSuffix = $lightSuffix + $(if ($IncludeSymbols) { '_with_pdb' } else { '' })
-$installerPath = Join-Path $PSScriptRoot "Output\MetasequoiaIME_Setup_v$Version$installerSuffix.exe"
+$installerPath = Join-Path $PSScriptRoot "Output\ChengjiangIME_Setup_v$Version$installerSuffix.exe"
 
 Push-Location $PSScriptRoot
 try {
@@ -270,7 +270,7 @@ try {
         -NoticesDirectory . `
         -HelpCodeDirectory engine/helpcode
 
-    # 整包签名，而不只是 MetasequoiaImeServer.exe。它是唯一一个「必须」签的——uiAccess=true
+    # 整包签名，而不只是 ChengjiangImeServer.exe。它是唯一一个「必须」签的——uiAccess=true
     # 没有可信签名就会被 Windows 忽略——但其余辅助进程和 DLL 不签名会被 Defender 拦截，
     # 用户看到的就是输入法装完之后某个面板打不开。外层安装包在编译之后单独签。
     Invoke-SimplySign -LiteralPath (Get-PayloadBinaryPaths) -Certificate $certificate

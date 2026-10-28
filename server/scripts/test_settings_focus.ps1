@@ -194,7 +194,7 @@ function Test-Activation([IntPtr]$Target, [IntPtr]$Settings, [uint32]$SettingsTh
 }
 
 $windows = [SettingsFocusNative]::TopLevelWindows() | ForEach-Object { Get-WindowInfo $_ }
-$settingsProcess = Get-Process MetasequoiaImeSettings -ErrorAction Stop | Select-Object -First 1
+$settingsProcess = Get-Process ChengjiangImeSettings -ErrorAction Stop | Select-Object -First 1
 $settingsInfo = $windows | Where-Object {
     $_.Pid -eq $settingsProcess.Id -and $_.Title -eq 'Metasequoia IME Settings'
 } | Select-Object -First 1

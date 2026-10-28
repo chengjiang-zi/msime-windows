@@ -9,7 +9,7 @@
 //
 // This writes HKCU and therefore has to run as the interactive user, never from the elevated registration:
 // DllRegisterServer runs elevated, and its HKCU is the administrator's hive, not the user's. The installer starts
-// MetasequoiaImeSettings.exe --register-profile as the original user to run this; the settings page also calls the
+// ChengjiangImeSettings.exe --register-profile as the original user to run this; the settings page also calls the
 // same helper before applying the game compat name, for machines installed before this existed.
 
 namespace input_method_install

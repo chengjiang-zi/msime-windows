@@ -121,13 +121,13 @@ TEST_CASE(update_check_puts_installers_under_the_data_directory)
 
     // 数据目录由环境变量决定；测试里指向临时目录，避免碰到真实安装的位置。
     const std::wstring previous = [&] {
-        DWORD needed = GetEnvironmentVariableW(L"METASEQUOIA_IME_DATA_DIR", nullptr, 0);
+        DWORD needed = GetEnvironmentVariableW(L"CHENGJIANG_IME_DATA_DIR", nullptr, 0);
         std::wstring value(needed, L'\0');
         if (needed != 0)
-            GetEnvironmentVariableW(L"METASEQUOIA_IME_DATA_DIR", value.data(), needed);
+            GetEnvironmentVariableW(L"CHENGJIANG_IME_DATA_DIR", value.data(), needed);
         if (needed != 0 && !value.empty() && value.back() == L'\0')
             value.pop_back();
-        SetEnvironmentVariableW(L"METASEQUOIA_IME_DATA_DIR", root.c_str());
+        SetEnvironmentVariableW(L"CHENGJIANG_IME_DATA_DIR", root.c_str());
         return value;
     }();
 
@@ -142,7 +142,7 @@ TEST_CASE(update_check_puts_installers_under_the_data_directory)
     REQUIRE(update_channel::InstallerDirectory(".hidden").empty());
     REQUIRE(update_channel::InstallerDirectory("").empty());
 
-    SetEnvironmentVariableW(L"METASEQUOIA_IME_DATA_DIR", previous.empty() ? nullptr : previous.c_str());
+    SetEnvironmentVariableW(L"CHENGJIANG_IME_DATA_DIR", previous.empty() ? nullptr : previous.c_str());
     fs::remove_all(root, ec);
 }
 
@@ -156,13 +156,13 @@ TEST_CASE(update_progress_round_trips_through_the_data_directory)
     REQUIRE(!ec);
 
     const std::wstring previous = [&] {
-        DWORD needed = GetEnvironmentVariableW(L"METASEQUOIA_IME_DATA_DIR", nullptr, 0);
+        DWORD needed = GetEnvironmentVariableW(L"CHENGJIANG_IME_DATA_DIR", nullptr, 0);
         std::wstring value(needed, L'\0');
         if (needed != 0)
-            GetEnvironmentVariableW(L"METASEQUOIA_IME_DATA_DIR", value.data(), needed);
+            GetEnvironmentVariableW(L"CHENGJIANG_IME_DATA_DIR", value.data(), needed);
         if (needed != 0 && !value.empty() && value.back() == L'\0')
             value.pop_back();
-        SetEnvironmentVariableW(L"METASEQUOIA_IME_DATA_DIR", root.c_str());
+        SetEnvironmentVariableW(L"CHENGJIANG_IME_DATA_DIR", root.c_str());
         return value;
     }();
 
@@ -208,6 +208,6 @@ TEST_CASE(update_progress_round_trips_through_the_data_directory)
     }
     REQUIRE(update_channel::ReadProgress().state == update_channel::DownloadProgress::State::Idle);
 
-    SetEnvironmentVariableW(L"METASEQUOIA_IME_DATA_DIR", previous.empty() ? nullptr : previous.c_str());
+    SetEnvironmentVariableW(L"CHENGJIANG_IME_DATA_DIR", previous.empty() ? nullptr : previous.c_str());
     fs::remove_all(root, ec);
 }

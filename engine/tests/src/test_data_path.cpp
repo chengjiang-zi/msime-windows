@@ -10,9 +10,9 @@ namespace
 void set_data_directory(const std::filesystem::path &path)
 {
 #ifdef _WIN32
-    if (_wputenv_s(L"METASEQUOIA_IME_DATA_DIR", path.c_str()) != 0)
+    if (_wputenv_s(L"CHENGJIANG_IME_DATA_DIR", path.c_str()) != 0)
 #else
-    if (setenv("METASEQUOIA_IME_DATA_DIR", metasequoia::path_to_utf8(path).c_str(), 1) != 0)
+    if (setenv("CHENGJIANG_IME_DATA_DIR", metasequoia::path_to_utf8(path).c_str(), 1) != 0)
 #endif
     {
         throw std::runtime_error("Failed to set the data directory override.");
@@ -24,6 +24,22 @@ int run_test()
 {
     const std::filesystem::path expected =
         std::filesystem::temp_directory_path() / std::filesystem::u8path("metasequoia-ime-词库");
+    const std::filesystem::path upstream_override =
+        std::filesystem::temp_directory_path() / std::filesystem::u8path("upstream-ime-词库");
+#ifdef _WIN32
+    if (_wputenv_s(L"CHENGJIANG_IME_DATA_DIR", L"") != 0 ||
+        _wputenv_s(L"METASEQUOIA_IME_DATA_DIR", upstream_override.c_str()) != 0)
+#else
+    if (unsetenv("CHENGJIANG_IME_DATA_DIR") != 0 ||
+        setenv("METASEQUOIA_IME_DATA_DIR", metasequoia::path_to_utf8(upstream_override).c_str(), 1) != 0)
+#endif
+    {
+        throw std::runtime_error("Failed to set the upstream data directory override.");
+    }
+    if (metasequoia::data_directory() == upstream_override)
+    {
+        throw std::runtime_error("The personal edition followed the upstream data directory override.");
+    }
     set_data_directory(expected);
     if (metasequoia::data_directory() != expected)
     {

@@ -37,6 +37,8 @@ concurrency:
 jobs:
   prepare:
     name: Prepare release metadata
+    # Personal forks must define their own reviewed publication process first.
+    if: ${{ github.repository == 'metasequoiaime/msime-windows' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -692,7 +694,7 @@ jobs:
           CERTIFICATE_THUMBPRINT: ${{ vars.WINDOWS_SIGNING_CERTIFICATE_THUMBPRINT }}
           TIMESTAMP_URL: ${{ vars.WINDOWS_SIGNING_TIMESTAMP_URL || 'http://timestamp.digicert.com' }}
           TARGET_VERSION: ${{ needs.prepare.outputs.version }}
-        run: ../scripts/ci/sign-binaries.ps1 -Path "Output/MetasequoiaIME_Setup_v$env:TARGET_VERSION.exe"
+        run: ../scripts/ci/sign-binaries.ps1 -Path "Output/ChengjiangIME_Setup_v$env:TARGET_VERSION.exe"
 
       - name: Stage the installer for SignPath
         if: ${{ steps.signing.outputs.signing_provider == 'signpath' }}

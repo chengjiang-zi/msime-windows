@@ -26,6 +26,8 @@ constexpr char kDownloadMirrorPrefix[] = "https://dl.msime.app/gh/";
 constexpr char kWebsiteUrl[] = "https://msime.app/";
 constexpr char kLicenseUrl[] = "https://github.com/metasequoiaime/MSIME-Windows/blob/main/LICENSE";
 constexpr char kPrivacyUrl[] = "https://github.com/metasequoiaime/MSIME-Windows/blob/main/PRIVACY.md";
+// The upstream manifest points to the upstream installer, not this fork.
+constexpr bool kPersonalUpdatesEnabled = false;
 // The version the page shows (partials/about-settings.html), sourced from version.txt.
 constexpr char kShownVersion[] = "v" MSIME_PRODUCT_VERSION;
 
@@ -566,8 +568,7 @@ VisualPtr BuildAboutPage(PageContext &context)
     // .about-hero: mark, then eyebrow / title / text, gap 20px. The eyebrow is uppercased.
     auto heroRow = std::make_shared<Row>(20.0f);
     heroRow->Add(std::make_shared<AboutMark>());
-    heroRow->Add(MakeDocumentHero(L"METASEQUOIA IME", L"水杉 IME", L"为现代 Windows 桌面体验打造的开放中文输入法。"),
-                 1.0f);
+    heroRow->Add(MakeDocumentHero(L"PERSONAL EDITION", L"水杉输入法 · 个人版", L"基于开源水杉输入法开发。"), 1.0f);
     page.AddRaw(std::make_shared<PaddedSection>(heroRow, Thickness{28.0f, 26.0f, 28.0f, 26.0f}));
 
     // .about-links: no vertical padding, rows of 66px.
@@ -594,7 +595,8 @@ VisualPtr BuildAboutPage(PageContext &context)
         style.transitionMs = 150.0;
         style.pressShift = true;
         style.disabledOpacity = 0.65f;
-        state->check = std::make_shared<CssButton>(L"检查更新", style);
+        state->check = std::make_shared<CssButton>(L"个人版暂不支持更新", style);
+        state->check->SetDisabled(!kPersonalUpdatesEnabled);
         PageContext *ctx = &context;
         std::weak_ptr<AboutState> weak = state;
         state->check->SetOnClick([ctx, weak]() {
@@ -605,7 +607,7 @@ VisualPtr BuildAboutPage(PageContext &context)
     }
     // 自动下载是一个独立设置行，不塞进上面的按钮行：它改的是后台行为，和「现在检查一次」
     // 是两件事。只有正式版参与自动更新，dev 与 nightly 渲染出来只会是个勾了也没用的开关。
-    if (update_download::IsReleaseVersion(MSIME_PRODUCT_VERSION))
+    if (kPersonalUpdatesEnabled && update_download::IsReleaseVersion(MSIME_PRODUCT_VERSION))
     {
         auto left = std::make_shared<Column>(0.0f);
         left->Add(MakeLabel(L"自动下载更新", DocStyle(13.0f, DWRITE_FONT_WEIGHT_MEDIUM), TextRole::Primary));
@@ -684,7 +686,7 @@ VisualPtr BuildAboutPage(PageContext &context)
         // The space before the detail <span> belongs to the title text.
         {L"官网 ", L"msime.app", kWebsiteUrl},
         {L"开源许可协议", nullptr, kLicenseUrl},
-        {L"隐私政策", nullptr, kPrivacyUrl},
+        {L"原项目隐私说明", nullptr, kPrivacyUrl},
     };
     for (size_t i = 0; i < std::size(documents); ++i)
     {

@@ -535,7 +535,7 @@ int run(int argc, wchar_t **argv)
     }
     if (usage || source.empty() || data_dir.empty())
     {
-        std::wcerr << L"Usage: MetasequoiaImeDictionaryBuild.exe --source <directory> --data-dir <directory> "
+        std::wcerr << L"Usage: ChengjiangImeDictionaryBuild.exe --source <directory> --data-dir <directory> "
                       L"[--log <file>]\n";
         return 2;
     }

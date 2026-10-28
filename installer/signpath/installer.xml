@@ -7,7 +7,7 @@
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <zip-file>
     <directory path="Output">
-      <pe-file path="MetasequoiaIME_Setup_v*.exe">
+      <pe-file path="ChengjiangIME_Setup_v*.exe">
         <authenticode-sign />
       </pe-file>
     </directory>

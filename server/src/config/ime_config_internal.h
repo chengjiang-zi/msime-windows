@@ -63,7 +63,7 @@ class ConfigFileLock
   public:
     ConfigFileLock()
     {
-        handle_ = CreateMutexW(nullptr, FALSE, L"Local\\MetasequoiaIme.ConfigFile");
+        handle_ = CreateMutexW(nullptr, FALSE, L"Local\\ChengjiangIme.ConfigFile");
         if (handle_)
         {
             const DWORD result = WaitForSingleObject(handle_, 5000);

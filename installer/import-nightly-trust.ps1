@@ -8,7 +8,7 @@
 # 用管理员 PowerShell 运行（写 LocalMachine 存储需要提升）：
 #   pwsh -File .\import-nightly-trust.ps1 [-CertificatePath .\nightly-signing.cer]
 #
-# 导入完成就可以安装同目录下的 MetasequoiaIME_Setup_v*-nightly.*.exe。
+# 导入完成就可以安装同目录下的 ChengjiangIME_Setup_v*-nightly.*.exe。
 #
 # 证书到期前需要换发：本脚本会在证书进入最后 30 天时给出提醒。
 [CmdletBinding()]

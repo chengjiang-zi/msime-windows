@@ -32,6 +32,6 @@ New-Item -ItemType Directory -Force -Path (Join-Path $data 'radical') | Out-Null
 Copy-Item $radical -Destination (Join-Path $data 'radical') -Force
 Copy-Item (Join-Path $automationRoot 'server/assets/tables/*') -Destination $data -Force
 Copy-Item (Join-Path $automationRoot 'server/assets/config/config.toml') -Destination $data -Force
-$env:METASEQUOIA_IME_DATA_DIR = $data
+$env:CHENGJIANG_IME_DATA_DIR = $data
 ctest --no-tests=error --test-dir $BuildDir -C Release --output-on-failure --timeout 120
 if ($LASTEXITCODE -ne 0) { throw 'Engine tests failed for the locked product' }

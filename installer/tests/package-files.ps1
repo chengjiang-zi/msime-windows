@@ -13,12 +13,12 @@ try {
     Copy-Item (Join-Path $PSScriptRoot '../msime_setup.iss') $installer
     Copy-Item (Join-Path $PSScriptRoot '../default_config') $installer -Recurse
     foreach ($file in @(
-        'server/build-release/bin/Release/MetasequoiaImeServer.exe',
-        'server/build-release/bin/Release/MetasequoiaImeServer.pdb',
-        'server/build-release/bin/Release/MetasequoiaImeDictionaryReplay.exe',
-        'server/build-release/bin/Release/MetasequoiaImeDictionaryReplay.pdb',
-        'server/build-release/bin/Release/MetasequoiaImeDictionaryBuild.exe',
-        'server/build-release/bin/Release/MetasequoiaImeDictionaryBuild.pdb',
+        'server/build-release/bin/Release/ChengjiangImeServer.exe',
+        'server/build-release/bin/Release/ChengjiangImeServer.pdb',
+        'server/build-release/bin/Release/ChengjiangImeDictionaryReplay.exe',
+        'server/build-release/bin/Release/ChengjiangImeDictionaryReplay.pdb',
+        'server/build-release/bin/Release/ChengjiangImeDictionaryBuild.exe',
+        'server/build-release/bin/Release/ChengjiangImeDictionaryBuild.pdb',
         'server/build-release/bin/Release/MetasequoiaImeServerTests.exe',
         'server/build-release/bin/Release/MetasequoiaImeServerTests.pdb',
         'server/build-release/bin/Release/test_webview_contract.exe',
@@ -78,17 +78,17 @@ strings = "あ亜".encode()
                          'app_data/sentence-model.safetensors', 'app_data/chinese-ime-lm-NOTICE.md',
                          'tsf_dll/32/MetasequoiaImeTsf.dll', 'tsf_dll/32/MetasequoiaImeTsf.pdb',
                          'tsf_dll/64/MetasequoiaImeTsf.dll', 'tsf_dll/64/MetasequoiaImeTsf.pdb',
-                         'server_exe/MetasequoiaImeServer.pdb',
-                         'server_exe/MetasequoiaImeDictionaryReplay.pdb',
+                         'server_exe/ChengjiangImeServer.pdb',
+                         'server_exe/ChengjiangImeDictionaryReplay.pdb',
                          'app_data/helpcodes/helpcode.txt', 'app_data/radical/decomposition.txt',
                          'default_skins/fluent/skin.toml',
                          'THIRD_PARTY_NOTICES.txt', 'LICENSE.txt', 'MetasequoiaImeTip.ico')) {
         if (-not (Test-Path (Join-Path $installer $file))) { throw "Missing packaged file: $file" }
     }
-    # 词库以文本源进包，安装时由 MetasequoiaImeDictionaryBuild.exe 还原；SQLite 文件本身不能再进 app_data。
+    # 词库以文本源进包，安装时由 ChengjiangImeDictionaryBuild.exe 还原；SQLite 文件本身不能再进 app_data。
     foreach ($file in @('dictionary_source/msime.dump', 'dictionary_source/english.dump', 'dictionary_source/others.dump',
                          'dictionary_source/dict_japanese.tokens', 'dictionary_source/dict_japanese.connection',
-                         'server_exe/MetasequoiaImeDictionaryBuild.exe')) {
+                         'server_exe/ChengjiangImeDictionaryBuild.exe')) {
         if (-not (Test-Path (Join-Path $installer $file))) { throw "Missing packaged file: $file" }
     }
     foreach ($file in @('msime.db', 'english.db', 'others.db', 'dict_japanese.dat')) {
@@ -196,7 +196,7 @@ strings = "あ亜".encode()
     & (Join-Path $installer 'Prepare-PackageFiles.ps1') -RepoRoot $fixture -TargetVersion '2026.9.1'
     foreach ($file in @('app_data/assets/settings/sidebar/about.svg',
                          'tsf_dll/32/MetasequoiaImeTsf.dll', 'tsf_dll/64/MetasequoiaImeTsf.dll',
-                         'server_exe/MetasequoiaImeServer.exe')) {
+                         'server_exe/ChengjiangImeServer.exe')) {
         if (-not (Test-Path (Join-Path $installer $file))) { throw "Missing packaged file: $file" }
     }
     $stagedSymbols = @(
@@ -206,7 +206,7 @@ strings = "あ亜".encode()
     if ($stagedSymbols.Count -gt 0) {
         throw "Packaged symbols without -IncludeSymbols: $($stagedSymbols.Name -join ', ')"
     }
-    $serverPdbFixture = Join-Path $fixture 'server/build-release/bin/Release/MetasequoiaImeServer.pdb'
+    $serverPdbFixture = Join-Path $fixture 'server/build-release/bin/Release/ChengjiangImeServer.pdb'
     Remove-Item $serverPdbFixture -Force
     $rejected = $false
     try { & (Join-Path $installer 'Prepare-PackageFiles.ps1') -RepoRoot $fixture } catch { $rejected = $_.Exception.Message -match 'PDB' }

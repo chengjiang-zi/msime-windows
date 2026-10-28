@@ -57,9 +57,9 @@ function Reset-Directory {
 }
 
 $serverRelease = Join-Path $RepoRoot (Join-Path $ServerDirectory 'build-release\bin\Release')
-$dictionaryReplayRelease = Join-Path $serverRelease 'MetasequoiaImeDictionaryReplay.exe'
-$dictionaryBuildRelease = Join-Path $serverRelease 'MetasequoiaImeDictionaryBuild.exe'
-# 词库不以 SQLite 文件进包：pack-dictionary-source.py 导出成文本源，安装时由 MetasequoiaImeDictionaryBuild.exe 还原。
+$dictionaryReplayRelease = Join-Path $serverRelease 'ChengjiangImeDictionaryReplay.exe'
+$dictionaryBuildRelease = Join-Path $serverRelease 'ChengjiangImeDictionaryBuild.exe'
+# 词库不以 SQLite 文件进包：pack-dictionary-source.py 导出成文本源，安装时由 ChengjiangImeDictionaryBuild.exe 还原。
 $dictionarySourceExporter = Join-Path $RepoRoot 'scripts\pack-dictionary-source.py'
 $tsf32Release = Join-Path $RepoRoot (Join-Path $TsfDirectory 'build32-release\Release\MetasequoiaImeTsf.dll')
 $tsf64Release = Join-Path $RepoRoot (Join-Path $TsfDirectory 'build64-release\Release\MetasequoiaImeTsf.dll')
@@ -168,7 +168,7 @@ else {
     # 引擎首次使用时由 UserDict::reset 在用户数据目录下自行建出来。
     Copy-Item -LiteralPath $pinyinModel -Destination (Join-Path $targetAppData 'dict_pinyin.dat') -Force
     # msime.db、english.db、others.db、dict_japanese.dat 不进 app_data：SQLite 页和索引几乎压不动，
-    # 导出成文本源后安装包小约 40 MB。安装程序在 ssPostInstall 里调 MetasequoiaImeDictionaryBuild.exe
+    # 导出成文本源后安装包小约 40 MB。安装程序在 ssPostInstall 里调 ChengjiangImeDictionaryBuild.exe
     # 把它们还原到数据目录（行数逐表核对，日文模型核对 SHA-256），见 msime_setup.iss 的 BuildDictionaries。
     python $dictionarySourceExporter --out (Split-Path -Parent $dictionaryDb) --target $targetDictionarySource
     if ($LASTEXITCODE -ne 0) {

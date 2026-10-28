@@ -82,11 +82,11 @@ HWND FindImeServerCandidateWindow()
 {
     // Candidate, tray menu, and floating toolbar share the same class. FindWindow
     // without a title often hits the toolbar, which does not apply config.
-    if (const HWND hwnd = FindWindowW(L"metasequoiaime_windows", L"metaseuqoiaimecandwnd"))
+    if (const HWND hwnd = FindWindowW(L"chengjiangime_windows", L"chengjiangimecandwnd"))
     {
         return hwnd;
     }
-    return FindWindowW(L"metasequoiaime_windows", nullptr);
+    return FindWindowW(L"chengjiangime_windows", nullptr);
 }
 
 bool SendAuxConfigNotification(const wchar_t *message)

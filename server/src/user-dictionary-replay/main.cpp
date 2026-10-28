@@ -25,7 +25,7 @@ int run(int argc, wchar_t **argv)
         }
         else
         {
-            std::wcerr << L"Usage: MetasequoiaImeDictionaryReplay.exe [--data-dir <directory>]\n";
+            std::wcerr << L"Usage: ChengjiangImeDictionaryReplay.exe [--data-dir <directory>]\n";
             return 2;
         }
     }

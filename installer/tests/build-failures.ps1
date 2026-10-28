@@ -35,7 +35,7 @@ try {
     $global:MsimeFailAt = 0
     $global:MsimeManifestExit = 0
     & (Join-Path $fixture 'server/scripts/lcompile-release.ps1') -ManifestTool Invoke-MsimeManifestProbe
-    $binary = Join-Path $fixture 'server/build-release/bin/Release/MetasequoiaImeServer.exe'
+    $binary = Join-Path $fixture 'server/build-release/bin/Release/ChengjiangImeServer.exe'
     if ($global:MsimeManifestArguments.Count -ne 3 -or $global:MsimeManifestArguments[2] -ne "-outputresource:$binary;1") {
         throw 'Manifest resource id or path with spaces was split into separate commands'
     }
@@ -48,7 +48,7 @@ try {
     # The release workflow builds Server directly instead of calling lcompile-release.ps1, so
     # exercise the standalone CI embedding step too. This keeps the manifest-before-signing
     # contract covered without requiring a Windows SDK in this orchestration test.
-    $releaseBinary = Join-Path $fixture 'server/build-release/bin/Release/MetasequoiaImeServer.exe'
+    $releaseBinary = Join-Path $fixture 'server/build-release/bin/Release/ChengjiangImeServer.exe'
     $releaseManifest = Join-Path $fixture 'server/MetasequoiaImeServer.manifest'
     New-Item -ItemType Directory -Force (Split-Path $releaseBinary) | Out-Null
     New-Item -ItemType Directory -Force (Split-Path $releaseManifest) | Out-Null

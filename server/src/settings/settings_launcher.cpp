@@ -7,10 +7,10 @@
 
 namespace
 {
-constexpr wchar_t kSettingsWindowClass[] = L"MetasequoiaImeSettingsWindow";
-constexpr wchar_t kEmojiPanelWindowClass[] = L"msimeui.EmojiPanel";
-constexpr wchar_t kKeyboardPanelWindowClass[] = L"msimeui.KeyboardDemo";
-constexpr wchar_t kHandwritingPanelWindowClass[] = L"msimeui.HandwritingDemo";
+constexpr wchar_t kSettingsWindowClass[] = L"ChengjiangImeSettingsWindow";
+constexpr wchar_t kEmojiPanelWindowClass[] = L"chengjiangui.EmojiPanel";
+constexpr wchar_t kKeyboardPanelWindowClass[] = L"chengjiangui.KeyboardDemo";
+constexpr wchar_t kHandwritingPanelWindowClass[] = L"chengjiangui.HandwritingDemo";
 constexpr UINT kActivateSettings = WM_APP + 1;
 constexpr UINT kOpenSettingsAbout = WM_APP + 2;
 constexpr UINT kQuitSettings = WM_APP + 5;
@@ -62,7 +62,7 @@ bool OpenSettingsApplication()
     if (const HWND existing_window = FindWindowW(kSettingsWindowClass, nullptr))
         return ActivateSettingsWindow(existing_window, kActivateSettings);
 
-    return OpenSiblingApplication(L"MetasequoiaImeSettings.exe", nullptr);
+    return OpenSiblingApplication(L"ChengjiangImeSettings.exe", nullptr);
 }
 
 bool OpenSettingsAboutApplication()
@@ -77,7 +77,7 @@ bool OpenSettingsAboutApplication()
     module_path.resize(length);
 
     const std::filesystem::path application_path =
-        std::filesystem::path(module_path).parent_path() / L"MetasequoiaImeSettings.exe";
+        std::filesystem::path(module_path).parent_path() / L"ChengjiangImeSettings.exe";
     const HINSTANCE result = ShellExecuteW(nullptr, L"open", application_path.c_str(), L"--about",
                                            application_path.parent_path().c_str(), SW_SHOWNORMAL);
     return reinterpret_cast<INT_PTR>(result) > 32;
@@ -93,7 +93,7 @@ bool CloseSettingsApplication()
 
 bool OpenEmojiPanelApplication()
 {
-    return OpenSiblingApplication(L"MetasequoiaImeEmojiPanel.exe", kEmojiPanelWindowClass);
+    return OpenSiblingApplication(L"ChengjiangImeEmojiPanel.exe", kEmojiPanelWindowClass);
 }
 
 bool CloseEmojiPanelApplication()
@@ -103,7 +103,7 @@ bool CloseEmojiPanelApplication()
 
 bool OpenKeyboardPanelApplication()
 {
-    return OpenSiblingApplication(L"MetasequoiaImeKeyboardPanel.exe", kKeyboardPanelWindowClass);
+    return OpenSiblingApplication(L"ChengjiangImeKeyboardPanel.exe", kKeyboardPanelWindowClass);
 }
 
 bool CloseKeyboardPanelApplication()
@@ -113,7 +113,7 @@ bool CloseKeyboardPanelApplication()
 
 bool OpenHandwritingPanelApplication()
 {
-    return OpenSiblingApplication(L"MetasequoiaImeHandwritingPanel.exe", kHandwritingPanelWindowClass);
+    return OpenSiblingApplication(L"ChengjiangImeHandwritingPanel.exe", kHandwritingPanelWindowClass);
 }
 
 bool CloseHandwritingPanelApplication()

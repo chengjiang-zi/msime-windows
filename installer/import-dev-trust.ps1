@@ -7,7 +7,7 @@
 # 用管理员 PowerShell 运行（写 LocalMachine 存储需要提升）：
 #   pwsh -File .\import-dev-trust.ps1 [-CertificatePath .\dev-build.cer] [-Keep]
 #
-# 导入完成就可以安装同目录下的 MetasequoiaIME_Setup_v*-dev.*.exe。
+# 导入完成就可以安装同目录下的 ChengjiangIME_Setup_v*-dev.*.exe。
 # -Keep 保留旧证书不清理（排查签名问题时用）。
 [CmdletBinding()]
 param(
@@ -19,7 +19,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$Subject = 'CN=Metasequoia IME Dev Build Code Signing'
+$Subject = 'CN=Chengjiang IME Personal Dev Build Code Signing'
 $TrustStores = @('Cert:\LocalMachine\Root', 'Cert:\LocalMachine\TrustedPublisher')
 
 function Test-Administrator {

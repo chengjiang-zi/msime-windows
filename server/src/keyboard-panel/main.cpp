@@ -11,7 +11,7 @@
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int nCmdShow)
 {
-    CommonUtils::SingleInstanceGuard single_instance(L"Local\\MetasequoiaImeKeyboardPanel.SingleInstance");
+    CommonUtils::SingleInstanceGuard single_instance(L"Local\\ChengjiangImeKeyboardPanel.SingleInstance");
     if (!single_instance.is_valid())
         return -1;
     if (single_instance.already_running())
@@ -31,7 +31,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int nCmdShow)
     }
     msimeui::ThemeManager::SetCurrent(std::move(theme));
 
-    msimeui::Window window(L"msimeui.KeyboardDemo", L"Touch keyboard", 1100, 400);
+    msimeui::Window window(L"chengjiangui.KeyboardDemo", L"Touch keyboard", 1100, 400);
     // Keep the keyboard visible above the active application without taking
     // focus away from the text field that should receive its synthetic input.
     window.SetWindowStyle(WS_POPUP, WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST);

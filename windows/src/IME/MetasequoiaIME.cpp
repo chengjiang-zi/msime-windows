@@ -31,9 +31,9 @@ namespace
 {
 constexpr UINT IPC_FAILURES_BEFORE_SERVER_LAUNCH = 6;
 constexpr UINT SERVER_LAUNCH_RECONNECT_DELAY_MS = 500;
-constexpr wchar_t SERVER_MUTEX_NAME[] = L"Local\\MetasequoiaImeServer_SingleInstance";
-constexpr wchar_t SERVER_LAUNCH_MUTEX_NAME[] = L"Local\\MetasequoiaImeServer.Launch";
-constexpr wchar_t INSTALL_REGISTRY_KEY[] = L"Software\\Metasequoia\\MetasequoiaIME";
+constexpr wchar_t SERVER_MUTEX_NAME[] = L"Local\\ChengjiangImeServer_SingleInstance";
+constexpr wchar_t SERVER_LAUNCH_MUTEX_NAME[] = L"Local\\ChengjiangImeServer.Launch";
+constexpr wchar_t INSTALL_REGISTRY_KEY[] = L"Software\\Chengjiang\\PersonalIME";
 constexpr wchar_t SERVER_PATH_REGISTRY_VALUE[] = L"ServerPath";
 std::atomic<UINT> nextWindowMessageToken{0};
 std::atomic<bool> serverLaunchInFlight{false};
@@ -824,15 +824,15 @@ STDAPI CMetasequoiaIME::ActivateEx(ITfThreadMgr *pThreadMgr, TfClientId tfClient
         wcex.cbSize = sizeof(WNDCLASSEX);
         wcex.lpfnWndProc = CMetasequoiaIME_WindowProc;
         wcex.hInstance = Global::dllInstanceHandle;
-        wcex.lpszClassName = L"MetasequoiaIMEWorkerWnd";
+        wcex.lpszClassName = L"ChengjiangIMEWorkerWnd";
         wcex.cbWndExtra = sizeof(LONG_PTR);
         RegisterClassEx(&wcex);
     }
 
     _msgWndHandle = CreateWindowEx( //
         0,                          //
-        L"MetasequoiaIMEWorkerWnd", //
-        L"MetasequoiaIMEWorkerWnd", //
+        L"ChengjiangIMEWorkerWnd",  //
+        L"ChengjiangIMEWorkerWnd",  //
         0, 0, 0, 0, 0,              //
         HWND_MESSAGE,               //
         nullptr,                    //
@@ -1095,7 +1095,7 @@ STDAPI CMetasequoiaIME::Deactivate()
         }
         _msgWndHandle = nullptr;
     }
-    UnregisterClass(L"MetasequoiaIMEWorkerWnd", Global::dllInstanceHandle);
+    UnregisterClass(L"ChengjiangIMEWorkerWnd", Global::dllInstanceHandle);
 
     UnbindNamedpipeFocusState(this);
     _focusResetPending = false;

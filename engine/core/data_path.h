@@ -36,8 +36,8 @@ inline std::optional<std::wstring> wide_environment_variable(const wchar_t *name
 inline std::optional<std::wstring> read_installed_data_directory()
 {
     HKEY key = nullptr;
-    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Metasequoia\\MetasequoiaIME", 0,
-                      KEY_QUERY_VALUE | KEY_WOW64_64KEY, &key) != ERROR_SUCCESS)
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Chengjiang\\PersonalIME", 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY,
+                      &key) != ERROR_SUCCESS)
     {
         return std::nullopt;
     }
@@ -91,7 +91,7 @@ inline std::filesystem::path path_from_utf8(const char *path)
 inline std::filesystem::path data_directory()
 {
 #ifdef _WIN32
-    if (const auto override_path = detail::wide_environment_variable(L"METASEQUOIA_IME_DATA_DIR"))
+    if (const auto override_path = detail::wide_environment_variable(L"CHENGJIANG_IME_DATA_DIR"))
     {
         const std::filesystem::path path(*override_path);
         if (path.is_absolute())
@@ -100,7 +100,7 @@ inline std::filesystem::path data_directory()
         }
     }
 #else
-    if (const char *override_path = std::getenv("METASEQUOIA_IME_DATA_DIR"))
+    if (const char *override_path = std::getenv("CHENGJIANG_IME_DATA_DIR"))
     {
         const std::filesystem::path path = path_from_utf8(override_path);
         if (path.is_absolute())
@@ -127,14 +127,14 @@ inline std::filesystem::path data_directory()
         const std::filesystem::path root(*local_app_data);
         if (root.is_absolute())
         {
-            return root / L"metasequoiaime";
+            return root / L"chengjiangime";
         }
     }
 
     PWSTR known_path = nullptr;
     if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &known_path)) && known_path)
     {
-        const std::filesystem::path result = std::filesystem::path(known_path) / L"metasequoiaime";
+        const std::filesystem::path result = std::filesystem::path(known_path) / L"chengjiangime";
         CoTaskMemFree(known_path);
         return result;
     }

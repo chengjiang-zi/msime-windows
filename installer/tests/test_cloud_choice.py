@@ -27,7 +27,7 @@ class CloudChoiceTests(unittest.TestCase):
 
     def test_cloud_choice_runs_after_required_post_install_steps(self):
         post_install = function_body("CurStepChanged", "procedure")
-        for step in ("CreateWatchdogLogonTask;", "EnsureImeUserDataDir;", "'MetasequoiaImeWatchdog'"):
+        for step in ("CreateWatchdogLogonTask;", "EnsureImeUserDataDir;", "'ChengjiangImeWatchdog'"):
             self.assertLess(post_install.index(step), post_install.index("ApplyNetworkChoiceToUserConfig;"))
 
 

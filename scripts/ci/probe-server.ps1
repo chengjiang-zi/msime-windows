@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $automationRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $server = (Resolve-Path $ServerRoot).Path
-$binary = Join-Path $server "$BuildDir/bin/Release/MetasequoiaImeServer.exe"
+$binary = Join-Path $server "$BuildDir/bin/Release/ChengjiangImeServer.exe"
 # The engine is a component of the repository, not of the server, so the contracts do not move with
 # -ServerRoot.
 $contracts = Join-Path $automationRoot 'engine/contracts'
@@ -28,7 +28,7 @@ foreach ($architecture in @('Win32', 'x64')) {
 # On a persistent self-hosted runner a Server left behind by an earlier job wins
 # the single-instance mutex, the one started here returns 0 immediately, and the
 # probe silently handshakes with the older build instead. Clear the field first.
-Get-Process -Name 'MetasequoiaImeServer', 'MetasequoiaImeWatchdog' -ErrorAction SilentlyContinue |
+Get-Process -Name 'ChengjiangImeServer', 'ChengjiangImeWatchdog' -ErrorAction SilentlyContinue |
     Stop-Process -Force
 $process = Start-Process -FilePath $binary -ArgumentList '--watchdog-managed --pipe-probe' `
     -WorkingDirectory (Split-Path $binary) -PassThru

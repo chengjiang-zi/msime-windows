@@ -14,9 +14,9 @@
 
 namespace
 {
-constexpr wchar_t kConfigMutexName[] = L"Local\\MetasequoiaIme.ConfigFile";
-constexpr wchar_t kStoreMutexName[] = L"Local\\MetasequoiaIme.ClipboardHistory";
-constexpr wchar_t kMonitorClassName[] = L"MetasequoiaIme.ClipboardListener";
+constexpr wchar_t kConfigMutexName[] = L"Local\\ChengjiangIme.ConfigFile";
+constexpr wchar_t kStoreMutexName[] = L"Local\\ChengjiangIme.ClipboardHistory";
+constexpr wchar_t kMonitorClassName[] = L"ChengjiangIme.ClipboardListener";
 constexpr UINT_PTR kCaptureTimerId = 1;
 constexpr UINT kCaptureDebounceMs = 80;
 

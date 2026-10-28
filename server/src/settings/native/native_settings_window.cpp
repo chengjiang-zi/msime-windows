@@ -2494,7 +2494,7 @@ class SettingsWindowImpl : public HostServices
           }),
           context_(model_, *this)
     {
-        window_ = std::make_unique<msimeui::Window>(L"MetasequoiaImeSettingsWindow", L"Metasequoia IME Settings", 0, 0);
+        window_ = std::make_unique<msimeui::Window>(L"ChengjiangImeSettingsWindow", L"Metasequoia IME Settings", 0, 0);
         window_->AdoptExistingHwnd(hwnd_);
         window_->SetQuitOnDestroy(false);
         // The frame is extended into the client area for the custom caption; DWM does not

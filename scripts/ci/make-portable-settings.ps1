@@ -15,14 +15,14 @@ param(
 # 目录布局刻意与安装后的相对关系一致，这样程序内部的相对路径不用改：
 #
 #   MetasequoiaIME_Portable_v<版本>\
-#     MetasequoiaImeSettings.exe     设置窗口本体
+#     ChengjiangImeSettings.exe     设置窗口本体
 #     *.dll                          它链接的运行时（libcurl、sqlite3 等）
 #     assets\settings\...            侧栏图标、皮肤预览图
 #     skins\...                      皮肤
 #     run-settings.cmd               双击即可运行，帮你设好数据目录
 #     README.txt                     说明它是什么、不能做什么
 #
-# 数据目录用 run-settings.cmd 里的 METASEQUOIA_IME_DATA_DIR 指向包内的 data\，不碰注册表，
+# 数据目录用 run-settings.cmd 里的 CHENGJIANG_IME_DATA_DIR 指向包内的 data\，不碰注册表，
 # 也不碰 %LOCALAPPDATA% 里已安装版本的配置。删掉整个目录就是卸载。
 
 $ErrorActionPreference = 'Stop'
@@ -41,8 +41,8 @@ $appDataDir = Join-Path $staging 'app_data'
 Assert-PathExists -LiteralPath $serverExeDir -Description 'server_exe（先跑 Prepare-PackageFiles.ps1）'
 Assert-PathExists -LiteralPath $appDataDir -Description 'app_data（先跑 Prepare-PackageFiles.ps1）'
 
-$settingsExe = Join-Path $serverExeDir 'MetasequoiaImeSettings.exe'
-Assert-PathExists -LiteralPath $settingsExe -Description '设置窗口 MetasequoiaImeSettings.exe'
+$settingsExe = Join-Path $serverExeDir 'ChengjiangImeSettings.exe'
+Assert-PathExists -LiteralPath $settingsExe -Description '设置窗口 ChengjiangImeSettings.exe'
 $settingsAssets = Join-Path $appDataDir 'assets\settings'
 Assert-PathExists -LiteralPath $settingsAssets -Description '设置窗口图片资源 assets\settings'
 
@@ -61,7 +61,7 @@ New-Item -ItemType Directory -Path $stageOut -Force | Out-Null
 #    候选窗、面板都不需要，带着只会让包大一倍，还给人「这是个完整输入法」的错觉。
 Get-ChildItem -LiteralPath $serverExeDir -File | Where-Object {
     # 只保留设置程序和运行时依赖；其它可执行文件不是这次要预览的东西。
-    $_.Extension -in @('.exe', '.dll') -and $_.Name -ne 'MetasequoiaImeServer.exe'
+    $_.Extension -in @('.exe', '.dll') -and $_.Name -ne 'ChengjiangImeServer.exe'
 } | Copy-Item -Destination $stageOut -Force
 
 # 2. 设置窗口要读的图片与皮肤。资源路径按「数据目录\assets\settings」解析
@@ -98,20 +98,20 @@ rem Portable preview of the settings window.
 rem   run-settings.cmd        isolated: data lives in .\data, nothing touches this machine
 rem   run-settings.cmd live   live: uses the installed copy's data directory and config
 setlocal
-set "METASEQUOIA_IME_SETTINGS_INSTANCE=portable"
+set "CHENGJIANG_IME_SETTINGS_INSTANCE=portable"
 rem Default the data directory to the copy inside this folder. Assign it outside the if-block
 rem on purpose: cmd expands the whole block when it parses it, so a set inside is easy to get
 rem wrong later.
-set "METASEQUOIA_IME_DATA_DIR=%~dp0data"
+set "CHENGJIANG_IME_DATA_DIR=%~dp0data"
 if /I "%~1"=="live" (
     rem Must clear the inherited value: a developer shell usually sets this to a test profile,
     rem and leaving it would send live mode to that profile instead of the installed one.
-    set "METASEQUOIA_IME_DATA_DIR="
+    set "CHENGJIANG_IME_DATA_DIR="
     echo Using the installed data directory. Changes are written to it.
 ) else (
     echo Using the isolated data directory inside this folder.
 )
-start "" "%~dp0MetasequoiaImeSettings.exe"
+start "" "%~dp0ChengjiangImeSettings.exe"
 endlocal
 '@
 Set-Content -LiteralPath (Join-Path $stageOut 'run-settings.cmd') -Value $launcher -Encoding ascii

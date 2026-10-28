@@ -11,7 +11,7 @@
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int nCmdShow)
 {
-    CommonUtils::SingleInstanceGuard single_instance(L"Local\\MetasequoiaImeHandwritingPanel.SingleInstance");
+    CommonUtils::SingleInstanceGuard single_instance(L"Local\\ChengjiangImeHandwritingPanel.SingleInstance");
     if (!single_instance.is_valid())
         return -1;
     if (single_instance.already_running())
@@ -34,7 +34,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int nCmdShow)
     }
     msimeui::ThemeManager::SetCurrent(std::move(theme));
 
-    msimeui::Window window(L"msimeui.HandwritingDemo", L"\u6c34\u6749\u624b\u5199\u8bc6\u522b\u677f", 980, 650);
+    msimeui::Window window(L"chengjiangui.HandwritingDemo", L"\u6c34\u6749\u624b\u5199\u8bc6\u522b\u677f", 980, 650);
     window.SetWindowStyle(WS_POPUP, WS_EX_TOOLWINDOW | WS_EX_TOPMOST);
     window.SetDragRegionHeight(38.0f);
     window.SetRoundedCorners(true);

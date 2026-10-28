@@ -461,7 +461,7 @@ bool IsAuxiliaryInputProcess(DWORD process_id)
     {
         return true;
     }
-    if (_wcsicmp(image_name, L"MetasequoiaImeSettings.exe") == 0)
+    if (_wcsicmp(image_name, L"ChengjiangImeSettings.exe") == 0)
     {
         return false;
     }

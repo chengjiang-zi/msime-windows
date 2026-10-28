@@ -47,7 +47,7 @@ jobs:
     name: Skip if nothing changed
     # Only the schedule honours the "no new commits" gate: a manual run always
     # builds, whoever clicked it explicitly asked for a build.
-    if: ${{ github.event_name == 'schedule' }}
+    if: ${{ github.repository == 'metasequoiaime/msime-windows' && github.event_name == 'schedule' }}
     runs-on: depot-ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -86,7 +86,7 @@ jobs:
   tip:
     name: TSF ${{ matrix.name }}
     needs: gate
-    if: ${{ !cancelled() && needs.gate.result != 'failure' && needs.gate.outputs.changed != 'false' }}
+    if: ${{ github.repository == 'metasequoiaime/msime-windows' && !cancelled() && needs.gate.result != 'failure' && needs.gate.outputs.changed != 'false' }}
     runs-on: depot-windows-2025-8
     timeout-minutes: 60
     strategy:
@@ -153,7 +153,7 @@ jobs:
   server:
     name: Server
     needs: gate
-    if: ${{ !cancelled() && needs.gate.result != 'failure' && needs.gate.outputs.changed != 'false' }}
+    if: ${{ github.repository == 'metasequoiaime/msime-windows' && !cancelled() && needs.gate.result != 'failure' && needs.gate.outputs.changed != 'false' }}
     runs-on: depot-windows-2025-8
     timeout-minutes: 90
     env:
@@ -238,7 +238,7 @@ jobs:
   package:
     name: Package and publish
     needs: [gate, tip, server]
-    if: ${{ !cancelled() && needs.gate.result != 'failure' && needs.gate.outputs.changed != 'false' && needs.tip.result == 'success' && needs.server.result == 'success' }}
+    if: ${{ github.repository == 'metasequoiaime/msime-windows' && !cancelled() && needs.gate.result != 'failure' && needs.gate.outputs.changed != 'false' && needs.tip.result == 'success' && needs.server.result == 'success' }}
     # The publish step talks to github.com several times (release view/create/edit/upload) and
     # the downloads upstream of it have been the flakiest part of the week -- retry the whole
     # job once on failure before the notify job files an issue. Retrying a job re-runs every
@@ -329,7 +329,7 @@ jobs:
           CERTIFICATE_BASE64: ${{ secrets.NIGHTLY_CERTIFICATE_BASE64 }}
           CERTIFICATE_PASSWORD: ${{ secrets.NIGHTLY_CERTIFICATE_PASSWORD }}
           TIMESTAMP_URL: ${{ vars.WINDOWS_SIGNING_TIMESTAMP_URL || 'http://timestamp.digicert.com' }}
-        run: ./scripts/ci/sign-binaries.ps1 -Path (Join-Path $PWD "installer/Output/MetasequoiaIME_Setup_v${{ steps.version.outputs.display }}.exe")
+        run: ./scripts/ci/sign-binaries.ps1 -Path (Join-Path $PWD "installer/Output/ChengjiangIME_Setup_v${{ steps.version.outputs.display }}.exe")
       - name: Verify every signature came from the nightly certificate
         shell: pwsh
         env:
@@ -359,7 +359,7 @@ jobs:
         env:
           TARGET_VERSION: ${{ steps.version.outputs.display }}
         run: |
-          $built = "installer/Output/MetasequoiaIME_Setup_v$env:TARGET_VERSION.exe"
+          $built = "installer/Output/ChengjiangIME_Setup_v$env:TARGET_VERSION.exe"
           if (-not (Test-Path $built)) { throw "Inno Setup did not produce $built" }
           $hash = (Get-FileHash $built -Algorithm SHA256).Hash.ToLower()
           $size = [math]::Round((Get-Item $built).Length / 1MB, 1)
@@ -536,7 +536,7 @@ jobs:
     # explicit result checks cover a job that never started for another reason. A gate skip
     # (nothing to build) makes every downstream job "skipped", which is the channel working as
     # intended and files nothing.
-    if: ${{ failure() || cancelled() == false && (needs.tip.result == 'failure' || needs.server.result == 'failure' || needs.package.result == 'failure') }}
+    if: ${{ github.repository == 'metasequoiaime/msime-windows' && (failure() || cancelled() == false && (needs.tip.result == 'failure' || needs.server.result == 'failure' || needs.package.result == 'failure')) }}
     runs-on: depot-ubuntu-24.04
     steps:
       - name: File or update the nightly failure issue

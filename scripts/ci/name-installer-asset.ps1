@@ -7,10 +7,10 @@
 # Writes asset_path, asset_name and asset_sha256 to GITHUB_OUTPUT.
 $ErrorActionPreference = 'Stop'
 
-$built = "Output/MetasequoiaIME_Setup_v$env:TARGET_VERSION.exe"
+$built = "Output/ChengjiangIME_Setup_v$env:TARGET_VERSION.exe"
 if (-not (Test-Path $built)) { throw "Inno Setup did not produce $built" }
 
-$final = "Output/MetasequoiaIME_Setup_v$env:TARGET_VERSION$env:ASSET_SUFFIX.exe"
+$final = "Output/ChengjiangIME_Setup_v$env:TARGET_VERSION$env:ASSET_SUFFIX.exe"
 if ($built -ne $final) { Move-Item $built $final -Force }
 
 $hash = (Get-FileHash $final -Algorithm SHA256).Hash.ToLower()

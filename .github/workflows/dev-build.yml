@@ -149,6 +149,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
+      - name: Check personal edition identities
+        shell: pwsh
+        run: python tests/test_personal_identity.py
       - name: Stamp the dev version into the resource
         # The TSF DLL carries the product's VERSIONINFO even in a server-only build, because the
         # resource is stamped before configure; keep every build of this run on one version.
@@ -266,7 +269,7 @@ jobs:
     # Server, so there is no meaningful way to package a single-component run.
     if: ${{ !cancelled() && needs.tip.result == 'success' && needs.server.result == 'success' && (inputs.component || 'all') == 'all' }}
     runs-on: windows-2025
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -279,7 +282,7 @@ jobs:
           $display = python scripts/dev-build-version.py --display
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "display=$display" >> $env:GITHUB_OUTPUT
-          "installer=installer/Output/MetasequoiaIME_Setup_v$display.exe" >> $env:GITHUB_OUTPUT
+          "installer=installer/Output/ChengjiangIME_Setup_v$display.exe" >> $env:GITHUB_OUTPUT
       - name: Download the x64 TSF binary and symbols
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -326,16 +329,29 @@ jobs:
       - name: Install the Chinese language file for Inno Setup
         shell: pwsh
         run: ./scripts/ci/install-inno-language.ps1
+      - name: Test isolated data-path policy
+        shell: pwsh
+        run: ./installer/tests/personal-isolation.ps1
       - name: Compile the installer
         shell: pwsh
         working-directory: installer
-        run: pwsh -File ./Compile-Installer.ps1
+        run: pwsh -File ./Compile-Installer.ps1 -IsolationCiTest
       - name: Sign the installer
         shell: pwsh
         working-directory: installer
         env:
           DEV_CERT_PATH: ${{ runner.temp }}/dev-build.cer
         run: ./sign-dev-build.ps1 -Installer
+      - name: Test installation beside the upstream release
+        shell: pwsh
+        working-directory: installer
+        env:
+          TARGET_VERSION: ${{ steps.version.outputs.display }}
+          DEV_CERT_PATH: ${{ runner.temp }}/dev-build.cer
+        run: >-
+          ./tests/side-by-side-ci.ps1
+          -PersonalInstaller (Join-Path $PWD "Output/ChengjiangIME_Setup_v$env:TARGET_VERSION.exe")
+          -DevCertificate $env:DEV_CERT_PATH
       - name: Name the artifact and record its checksum
         id: asset
         shell: pwsh
@@ -343,7 +359,7 @@ jobs:
         env:
           TARGET_VERSION: ${{ steps.version.outputs.display }}
         run: |
-          $built = "Output/MetasequoiaIME_Setup_v$env:TARGET_VERSION.exe"
+          $built = "Output/ChengjiangIME_Setup_v$env:TARGET_VERSION.exe"
           if (-not (Test-Path $built)) { throw "Inno Setup did not produce $built" }
           $hash = (Get-FileHash $built -Algorithm SHA256).Hash.ToLower()
           $size = [math]::Round((Get-Item $built).Length / 1MB, 1)
@@ -353,7 +369,7 @@ jobs:
       - name: Upload the installer and the signing certificate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dev-installer
+          name: personal-isolation-test-installer
           retention-days: ${{ env.DEV_ARTIFACT_RETENTION }}
           path: |
             ${{ steps.asset.outputs.installer_path }}

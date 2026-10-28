@@ -27,7 +27,7 @@ try {
     cmake --build $buildDirectory --config Release --target $Target --parallel
     if ($LASTEXITCODE -ne 0) { throw "Server build failed ($LASTEXITCODE)" }
     # Keep the local SDK selection; the complete resource argument must reach mt.exe as one value.
-    $binary = Join-Path $buildDirectory 'bin/Release/MetasequoiaImeServer.exe'
+    $binary = Join-Path $buildDirectory 'bin/Release/ChengjiangImeServer.exe'
     & $ManifestTool `
         -manifest (Join-Path $projectRoot 'MetasequoiaImeServer.manifest') "-outputresource:$binary;1"
     if ($LASTEXITCODE -ne 0) { throw "Server manifest embedding failed ($LASTEXITCODE)" }

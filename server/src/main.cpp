@@ -48,7 +48,7 @@ void StartWatchdogIfNeeded(const char *command_line)
     const size_t separator = watchdog_path.find_last_of(L"\\/");
     if (separator == std::wstring::npos)
         return;
-    watchdog_path.replace(separator + 1, std::wstring::npos, L"MetasequoiaImeWatchdog.exe");
+    watchdog_path.replace(separator + 1, std::wstring::npos, L"ChengjiangImeWatchdog.exe");
     if (GetFileAttributesW(watchdog_path.c_str()) == INVALID_FILE_ATTRIBUTES)
         return;
 
@@ -91,7 +91,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE /*hPrevInstance*/,
                      _In_ int /*nCmdShow*/)
 {
     const bool pipe_probe = IsPipeProbe(lpCmdLine);
-    CommonUtils::SingleInstanceGuard single_instance(L"Local\\MetasequoiaImeServer_SingleInstance");
+    CommonUtils::SingleInstanceGuard single_instance(L"Local\\ChengjiangImeServer_SingleInstance");
     if (!single_instance.is_valid())
     {
         (void)0;
@@ -220,9 +220,8 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE /*hPrevInstance*/,
     if (radical_warmup.joinable())
         radical_warmup.join();
 
-    // 自动下载安装包的后台轮询。只在开着输入法进程时跑；用户关掉设置窗口不影响它，
-    // 这正是把下载放在 Server 而不是设置进程的原因。
-    update_check::StartPolling();
+    // A personal edition must never offer an upstream installer as its own
+    // update. Keep polling disabled until this fork has its own update channel.
 
     FanyNamedPipe::RegisterStatusSnapshotWindow(nullptr);
 

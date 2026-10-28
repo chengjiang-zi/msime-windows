@@ -115,7 +115,7 @@ constexpr UINT kStopRecordingMessage = WM_APP + 182;
 constexpr UINT kToggleRecordingMessage = WM_APP + 183;
 constexpr UINT kLockRecordingMessage = WM_APP + 184;
 constexpr UINT kCancelRecordingMessage = WM_APP + 185;
-constexpr wchar_t kMessageWindowClass[] = L"MetasequoiaImeVoiceInputMessageWindow";
+constexpr wchar_t kMessageWindowClass[] = L"ChengjiangImeVoiceInputMessageWindow";
 
 std::wstring ResolveCuePath(const wchar_t *filename)
 {

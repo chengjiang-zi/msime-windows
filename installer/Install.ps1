@@ -19,7 +19,7 @@ if ($issContent -notmatch '(?m)^#define\s+MyAppVersion\s+"(?<version>[^"]+)"') {
 }
 
 $suffix = if ($Light) { '_light' } else { '' }
-$installerPath = Join-Path $PSScriptRoot "Output\MetasequoiaIME_Setup_v$($Matches.version)$suffix.exe"
+$installerPath = Join-Path $PSScriptRoot "Output\ChengjiangIME_Setup_v$($Matches.version)$suffix.exe"
 if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf)) {
     throw "安装文件不存在，请先运行 Compile-Installer.ps1：$installerPath"
 }

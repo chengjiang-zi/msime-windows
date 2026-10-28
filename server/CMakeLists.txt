@@ -708,6 +708,18 @@ add_custom_command(TARGET ${SETTINGS_EXECUTABLE_NAME} POST_BUILD
         "$<TARGET_FILE_DIR:${SETTINGS_EXECUTABLE_NAME}>/dict"
 )
 
+# Different executable names are a safety boundary: the upstream installer
+# stops processes by image name, so sharing names would let either edition
+# terminate the other's server or panels during install/uninstall.
+set_target_properties(${MY_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "ChengjiangImeServer" PDB_NAME "ChengjiangImeServer")
+set_target_properties(${WATCHDOG_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "ChengjiangImeWatchdog" PDB_NAME "ChengjiangImeWatchdog")
+set_target_properties(${DICTIONARY_REPLAY_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "ChengjiangImeDictionaryReplay" PDB_NAME "ChengjiangImeDictionaryReplay")
+set_target_properties(${DICTIONARY_BUILD_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "ChengjiangImeDictionaryBuild" PDB_NAME "ChengjiangImeDictionaryBuild")
+set_target_properties(${EMOJI_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "ChengjiangImeEmojiPanel" PDB_NAME "ChengjiangImeEmojiPanel")
+set_target_properties(${KEYBOARD_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "ChengjiangImeKeyboardPanel" PDB_NAME "ChengjiangImeKeyboardPanel")
+set_target_properties(${HANDWRITING_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "ChengjiangImeHandwritingPanel" PDB_NAME "ChengjiangImeHandwritingPanel")
+set_target_properties(${SETTINGS_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "ChengjiangImeSettings" PDB_NAME "ChengjiangImeSettings")
+
 # Runtime assets next to the executable
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory

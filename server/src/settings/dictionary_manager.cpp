@@ -58,9 +58,9 @@ json::object Result(bool ok, std::string message)
 
 void NotifyImeServerClearDictCache()
 {
-    if (const HWND hwnd = FindWindowW(L"metasequoiaime_windows", L"metaseuqoiaimecandwnd"))
+    if (const HWND hwnd = FindWindowW(L"chengjiangime_windows", L"chengjiangimecandwnd"))
         PostMessageW(hwnd, WM_CLS_DICT_CACHE, 0, 0);
-    else if (const HWND anyClassHwnd = FindWindowW(L"metasequoiaime_windows", nullptr))
+    else if (const HWND anyClassHwnd = FindWindowW(L"chengjiangime_windows", nullptr))
         PostMessageW(anyClassHwnd, WM_CLS_DICT_CACHE, 0, 0);
 }
 

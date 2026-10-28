@@ -53,9 +53,9 @@ namespace json = boost::json;
 
 namespace
 {
-constexpr wchar_t kWindowClass[] = L"MetasequoiaImeSettingsWindow";
+constexpr wchar_t kWindowClass[] = L"ChengjiangImeSettingsWindow";
 constexpr wchar_t kWindowTitle[] = L"Metasequoia IME Settings";
-constexpr wchar_t kSingleInstanceMutex[] = L"Local\\MetasequoiaImeSettings.SingleInstance";
+constexpr wchar_t kSingleInstanceMutex[] = L"Local\\ChengjiangImeSettings.SingleInstance";
 constexpr UINT kActivateExistingWindow = WM_APP + 1;
 constexpr UINT kOpenAboutSection = WM_APP + 2;
 constexpr UINT kScanSkinCatalog = WM_APP + 3;
@@ -2013,10 +2013,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_
     if (FAILED(com_result))
         return 1;
 
-    // METASEQUOIA_IME_SETTINGS_INSTANCE gives a development build its own instance slot,
+    // CHENGJIANG_IME_SETTINGS_INSTANCE gives a development build its own instance slot,
     // so it can run next to an installed copy that is open at the same time.
     std::wstring mutex_name = kSingleInstanceMutex;
-    if (wchar_t suffix[64]{}; GetEnvironmentVariableW(L"METASEQUOIA_IME_SETTINGS_INSTANCE", suffix, 64) > 0)
+    if (wchar_t suffix[64]{}; GetEnvironmentVariableW(L"CHENGJIANG_IME_SETTINGS_INSTANCE", suffix, 64) > 0)
         mutex_name += std::wstring(L".") + suffix;
     CommonUtils::SingleInstanceGuard single_instance(mutex_name.c_str());
     if (!single_instance.is_valid())

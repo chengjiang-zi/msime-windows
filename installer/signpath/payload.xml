@@ -8,14 +8,14 @@
   <zip-file>
     <directory path="server_exe">
       <pe-file-set>
-        <include path="MetasequoiaImeServer.exe" />
-        <include path="MetasequoiaImeWatchdog.exe" />
-        <include path="MetasequoiaImeDictionaryReplay.exe" />
-        <include path="MetasequoiaImeDictionaryBuild.exe" />
-        <include path="MetasequoiaImeEmojiPanel.exe" />
-        <include path="MetasequoiaImeKeyboardPanel.exe" />
-        <include path="MetasequoiaImeHandwritingPanel.exe" />
-        <include path="MetasequoiaImeSettings.exe" />
+        <include path="ChengjiangImeServer.exe" />
+        <include path="ChengjiangImeWatchdog.exe" />
+        <include path="ChengjiangImeDictionaryReplay.exe" />
+        <include path="ChengjiangImeDictionaryBuild.exe" />
+        <include path="ChengjiangImeEmojiPanel.exe" />
+        <include path="ChengjiangImeKeyboardPanel.exe" />
+        <include path="ChengjiangImeHandwritingPanel.exe" />
+        <include path="ChengjiangImeSettings.exe" />
         <for-each>
           <authenticode-sign />
         </for-each>

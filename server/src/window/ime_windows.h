@@ -4,15 +4,15 @@
 
 #include <string>
 
-inline WCHAR szWindowClass[] = L"metasequoiaime_windows";
+inline WCHAR szWindowClass[] = L"chengjiangime_windows";
 
 /* 候选窗口 */
-inline WCHAR lpWindowNameCand[] = L"metaseuqoiaimecandwnd";
+inline WCHAR lpWindowNameCand[] = L"chengjiangimecandwnd";
 /* 菜单窗口 */
 inline WCHAR lpWindowNameMenu[] = L"metaseuqoiaimemenuwnd";
 /* floating toolbar 窗口 */
 inline WCHAR lpWindowNameFtb[] = L"metaseuqoiaimeftbwnd";
-inline WCHAR lpWindowNameCaretState[] = L"metasequoiaimecaretstatewnd";
+inline WCHAR lpWindowNameCaretState[] = L"chengjiangimecaretstatewnd";
 
 LRESULT RegisterCandidateWindowMessage();
 LRESULT RegisterIMEWindowsClass(WNDCLASSEX &, HINSTANCE);

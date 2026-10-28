@@ -184,7 +184,7 @@ bool TrayMenuPresenter::Bind(HWND hwnd)
         return false;
     }
     impl_ = std::make_unique<Impl>();
-    impl_->window = std::make_unique<msimeui::Window>(L"metasequoiaime_windows", L"menu", 1, 1);
+    impl_->window = std::make_unique<msimeui::Window>(L"chengjiangime_windows", L"menu", 1, 1);
     impl_->window->AdoptExistingHwnd(hwnd);
     impl_->window->SetStealFocusOnClick(false);
     bound_ = impl_->resources.EnsureForComposition(hwnd);

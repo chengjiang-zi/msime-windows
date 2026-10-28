@@ -2,7 +2,8 @@
 param(
     [string]$IsccPath,
     [string]$IssPath = (Join-Path $PSScriptRoot 'msime_setup.iss'),
-    [switch]$Light
+    [switch]$Light,
+    [switch]$IsolationCiTest
 )
 
 $ErrorActionPreference = 'Stop'
@@ -81,6 +82,12 @@ Write-Host "Inno Setup 编译器：$resolvedIsccPath"
 Write-Host "安装脚本：$resolvedIssPath"
 
 $isccArgs = @()
+if ($IsolationCiTest) {
+    if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $env:RUNNER_OS -ne 'Windows') {
+        throw 'The personal isolation test package may only be compiled on a disposable GitHub-hosted Windows runner.'
+    }
+    $isccArgs += '/DPersonalIsolationCiTest=1'
+}
 if ($Light) {
     $isccArgs += '/DLightPackage=1'
     Write-Host '轻量模式：安装包不含词库，输出文件名带 _light。'

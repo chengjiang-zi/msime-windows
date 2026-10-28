@@ -32,7 +32,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $data 'radical') | Out-Null
 Copy-Item $radical -Destination (Join-Path $data 'radical') -Force
 Copy-Item (Join-Path $server 'assets/tables/*') -Destination $data -Force
 Copy-Item (Join-Path $server 'assets/config/config.toml') -Destination $data -Force
-$env:METASEQUOIA_IME_DATA_DIR = $data
+$env:CHENGJIANG_IME_DATA_DIR = $data
 ctest --test-dir (Join-Path $server $BuildDir) -C Release --output-on-failure --timeout 120
 if ($LASTEXITCODE -ne 0) { throw 'Server integration tests failed for the locked product' }
 & (Join-Path $PSScriptRoot 'probe-server.ps1') -ServerRoot $server -BuildDir $BuildDir
