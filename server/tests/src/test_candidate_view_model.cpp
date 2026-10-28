@@ -1,6 +1,18 @@
 #include "window/candidate_view_model.h"
+#include "window/candidate_hit_region.h"
 #include "window/candidate_stable_extent.h"
 #include "tests/includes/test_framework.h"
+
+TEST_CASE(candidate_hit_region_preserves_card_and_popups_but_passes_through_padding)
+{
+    REQUIRE(CandidateReceivesPointer(10, 20, 10, 20, 100, 40, false));
+    REQUIRE(CandidateReceivesPointer(109, 59, 10, 20, 100, 40, false));
+    REQUIRE(!CandidateReceivesPointer(9, 20, 10, 20, 100, 40, false));
+    REQUIRE(!CandidateReceivesPointer(10, 19, 10, 20, 100, 40, false));
+    REQUIRE(!CandidateReceivesPointer(110, 60, 10, 20, 100, 40, false));
+    REQUIRE(CandidateReceivesPointer(0, 0, 10, 20, 100, 40, true));
+    REQUIRE(CandidateReceivesPointer(0, 0, 0, 0, 0, 0, false));
+}
 
 TEST_CASE(candidate_stable_extent_keeps_size_until_reset_and_obeys_monitor_limits)
 {

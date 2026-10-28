@@ -20,6 +20,7 @@ class CandidatePresenter
     void Hide();
     void Present();
     bool HandleMessage(UINT message, WPARAM wParam, LPARAM lParam);
+    bool ReceivesPointerAt(POINT screenPoint) const;
     // Puts the opaque card's top-left exactly on this physical point instead of
     // deriving it from the caret, for when no caret position is known at all.
     // nullptr returns to caret placement; Hide() clears it too.

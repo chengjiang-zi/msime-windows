@@ -1,4 +1,5 @@
 #include "window/candidate_presenter.h"
+#include "window/candidate_hit_region.h"
 
 #include "config/ime_config.h"
 #include "defines/defines.h"
@@ -1309,6 +1310,15 @@ void CandidatePresenter::NoteHoverOverItem(POINT clientPoint)
             return;
         }
     }
+}
+
+bool CandidatePresenter::ReceivesPointerAt(POINT screenPoint) const
+{
+    if (!bound_ || !hwnd_ || !impl_ || !impl_->window || !impl_->card || !ScreenToClient(hwnd_, &screenPoint))
+        return true;
+    const msimeui::PointF point = impl_->window->ClientPixelsToDips(screenPoint);
+    const msimeui::RectF card = impl_->card->GetBounds();
+    return CandidateReceivesPointer(point.x, point.y, card.x, card.y, card.width, card.height, impl_->contextMenuOpen);
 }
 
 bool CandidatePresenter::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam)

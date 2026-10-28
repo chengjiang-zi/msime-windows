@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <memory>
 #include <string>
+#include <windowsx.h>
 #include <fmt/xchar.h>
 #include "utils/window_utils.h"
 #include "ipc/event_listener.h"
@@ -533,6 +534,12 @@ LRESULT CALLBACK WndProcCandWindow(HWND hwnd, UINT message, WPARAM wParam, LPARA
         g_caret_fallback_anchor = result.anchor;
         FineTuneWindow(hwnd);
         return 0;
+    }
+
+    if (message == WM_NCHITTEST && CandidatePresenter::Instance().IsBound())
+    {
+        const POINT point{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+        return CandidatePresenter::Instance().ReceivesPointerAt(point) ? HTCLIENT : HTTRANSPARENT;
     }
 
     if (CandidatePresenter::Instance().HandleMessage(message, wParam, lParam))
