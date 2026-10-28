@@ -92,7 +92,7 @@ jobs:
             & "$env:SystemRoot/System32/icacls.exe" $state.DataDir /grant "*$($account.SID.Value):(OI)(CI)M" /T /C | Out-Null
             if ($LASTEXITCODE -ne 0) { throw 'Could not grant test data access.' }
             Copy-Item (Join-Path $smokeBuild 'Release/personal-tsf-interactive-smoke.exe') (Join-Path $probeDir 'smoke.exe')
-            Copy-Item 'installer/tests/standard-desktop-smoke.ps1' (Join-Path $probeDir 'smoke.ps1')
+            Copy-Item (Join-Path $build 'Release/personal-standard-input-probe.exe') (Join-Path $probeDir 'probe.exe')
             $configPath = Join-Path $state.DataDir 'config.toml'
             $config = [IO.File]::ReadAllText($configPath)
             foreach ($entry in @{'candidate_translations'='true'; 'candidate_window_fit_content'='false';
@@ -106,17 +106,18 @@ jobs:
             $env:CHENGJIANG_TEST_USERNAME = $userName
             $env:CHENGJIANG_TEST_PASSWORD = $password
             $launcher = Join-Path $build 'Release/personal-standard-desktop-launch.exe'
-            & $launcher (Get-Command pwsh).Source -NoProfile -File (Join-Path $probeDir 'smoke.ps1') `
-              -ExpectedSid $account.SID.Value -SmokeExe (Join-Path $probeDir 'smoke.exe') -ResultDir $probeDir `
-              -CertificateThumbprint $cert.Thumbprint
-            $result = $LASTEXITCODE
             $log = Join-Path $probeDir 'standard-input.log'
+            $settings = Join-Path (Split-Path -Parent $state.ServerPath) 'ChengjiangImeSettings.exe'
+            & $launcher (Join-Path $probeDir 'probe.exe') $settings $state.ServerPath (Join-Path $probeDir 'smoke.exe') `
+              $log $cert.Thumbprint
+            $result = $LASTEXITCODE
             if (Test-Path $log) { Get-Content $log | Write-Host }
-            if (Test-Path (Join-Path $probeDir 'standard-input-error.log')) { Get-Content (Join-Path $probeDir 'standard-input-error.log') | Write-Host }
             if ($result -ne 0 -or -not (Test-Path $log) -or
-                -not ([IO.File]::ReadAllText($log).Contains('PASS: actual standard user committed Chinese text'))) {
+                -not ([IO.File]::ReadAllText($log).Contains('PASS: personal TSF committed Chinese text')) -or
+                ([IO.File]::ReadAllText($log).Contains('SKIP:'))) {
               throw "Standard-user input did not complete successfully ($result)."
             }
+            Write-Host 'PASS: actual standard user committed Chinese text without certificate trust.'
           } finally {
             Remove-Item Env:CHENGJIANG_TEST_USERNAME, Env:CHENGJIANG_TEST_PASSWORD -ErrorAction SilentlyContinue
             $password = $null
