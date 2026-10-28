@@ -8,13 +8,18 @@ if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hoste
 $suffix = [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $userName = 'cjtest' + $suffix
 $taskName = 'ChengjiangImeTest-' + $suffix
-$probeExe = Join-Path $env:PUBLIC ($taskName + '-probe.exe')
-$probeResult = Join-Path $env:PUBLIC ($taskName + '-result.txt')
+$probeRoot = Join-Path $env:PUBLIC $taskName
+$probeExe = Join-Path $probeRoot 'probe.exe'
+$probeResult = Join-Path $probeRoot 'result.txt'
+$probeLog = Join-Path $probeRoot 'probe.log'
 $createdUser = $false
 try {
     $password = ConvertTo-SecureString ([Guid]::NewGuid().ToString('N') + 'aA9!') -AsPlainText -Force
     $user = New-LocalUser -Name $userName -Password $password -PasswordNeverExpires
     $createdUser = $true
+    New-Item -ItemType Directory -Path $probeRoot | Out-Null
+    & "$env:SystemRoot\System32\icacls.exe" $probeRoot /grant "*$($user.SID.Value):(OI)(CI)M" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not grant the test user access to the probe directory.' }
     $account = "$env:COMPUTERNAME\$userName"
     $action = New-ScheduledTaskAction -Execute (Join-Path $env:SystemRoot 'System32\notepad.exe')
     $trigger = New-ScheduledTaskTrigger -AtLogOn -User $account
@@ -47,12 +52,16 @@ try {
     Remove-Item -LiteralPath $probeResult -Force
     $credential = [Management.Automation.PSCredential]::new($account, $password)
     $process = Start-Process -FilePath $probeExe -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES',
-        "/RESULT=`"$probeResult`"") -Credential $credential -LoadUserProfile -WindowStyle Hidden -PassThru
+        "/RESULT=`"$probeResult`"", "/LOG=`"$probeLog`"") -Credential $credential -LoadUserProfile -WindowStyle Hidden -PassThru
     if (-not $process.WaitForExit(60000)) {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         throw 'Different-account shell-user probe timed out.'
     }
-    if (-not (Test-Path -LiteralPath $probeResult -PathType Leaf)) { throw 'Shell-user probe produced no result.' }
+    if (-not (Test-Path -LiteralPath $probeResult -PathType Leaf)) {
+        $process.Refresh()
+        if (Test-Path -LiteralPath $probeLog) { Get-Content -LiteralPath $probeLog | Write-Host }
+        throw "Shell-user probe produced no result (exit $($process.ExitCode))."
+    }
     $lines = [IO.File]::ReadAllLines($probeResult)
     $shellOwner = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     if ($lines[0] -ne 'unavailable' -and $lines[0] -ne $shellOwner) {
@@ -70,4 +79,6 @@ try {
     if ($createdUser) { Remove-LocalUser -Name $userName }
     if (Test-Path -LiteralPath $probeExe) { Remove-Item -LiteralPath $probeExe -Force }
     if (Test-Path -LiteralPath $probeResult) { Remove-Item -LiteralPath $probeResult -Force }
+    if (Test-Path -LiteralPath $probeLog) { Remove-Item -LiteralPath $probeLog -Force }
+    if (Test-Path -LiteralPath $probeRoot) { Remove-Item -LiteralPath $probeRoot -Force }
 }
