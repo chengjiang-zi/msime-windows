@@ -10,6 +10,11 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     endif()
 endif()
 
+add_executable(test_mouse_caret_policy mouse_caret_policy.cpp)
+target_include_directories(test_mouse_caret_policy PRIVATE ../src)
+target_compile_features(test_mouse_caret_policy PRIVATE cxx_std_17)
+add_test(NAME mouse_caret_policy COMMAND test_mouse_caret_policy)
+
 add_executable(test_vim_mode vim_mode.cpp ../src/Key/VimMode.cpp)
 target_include_directories(test_vim_mode PRIVATE ../src)
 target_compile_features(test_vim_mode PRIVATE cxx_std_17)
