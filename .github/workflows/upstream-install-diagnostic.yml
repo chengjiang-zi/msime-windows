@@ -2,6 +2,11 @@ name: Upstream installer diagnostic
 
 on:
   workflow_dispatch:
+    inputs:
+      package_run_id:
+        description: Optional successful Dev build run ID containing the test installer
+        required: false
+        type: string
   push:
     branches:
       - codex/personal-edition-isolation
@@ -17,8 +22,85 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
+  package-input:
+    name: Retest input with a previously built package
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.package_run_id != '' }}
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: personal-isolation-test-installer
+          path: ${{ runner.temp }}/personal-test-package
+          run-id: ${{ inputs.package_run_id }}
+          github-token: ${{ github.token }}
+      - name: Install in the disposable VM and run input checks
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted') { throw 'Disposable runner required.' }
+          $files = @(Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/personal-test-package" -Recurse -File)
+          $installers = @($files | Where-Object Name -Like 'ChengjiangIME_Setup_*.exe')
+          $certificates = @($files | Where-Object Name -eq 'dev-build.cer')
+          if ($installers.Count -ne 1 -or $certificates.Count -ne 1) { throw 'Unexpected test artifact contents.' }
+          $cert = [Security.Cryptography.X509Certificates.X509Certificate2]::new($certificates[0].FullName)
+          $signature = Get-AuthenticodeSignature -LiteralPath $installers[0].FullName
+          if ($cert.Subject -ne 'CN=Chengjiang IME Personal Dev Build Code Signing' -or
+              -not $signature.SignerCertificate -or $signature.SignerCertificate.Thumbprint -ne $cert.Thumbprint) {
+            throw 'Unexpected development signature.'
+          }
+          Import-Certificate -FilePath $certificates[0].FullName -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
+          Import-Certificate -FilePath $certificates[0].FullName -CertStoreLocation 'Cert:\LocalMachine\TrustedPublisher' | Out-Null
+          $languages = Get-WinUserLanguageList
+          if (-not ($languages | Where-Object { $_.LanguageTag -like 'zh-*' })) {
+            $languages.Add('zh-Hans-CN')
+            Set-WinUserLanguageList -LanguageList $languages -Force
+          }
+          $setup = Start-Process -FilePath $installers[0].FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -WindowStyle Hidden -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Personal setup failed: $($setup.ExitCode)" }
+          $desktop = Join-Path $env:RUNNER_TEMP 'retest-desktop.txt'
+          & pwsh -STA -File ./installer/tests/interactive-desktop-probe.ps1 -ResultPath $desktop
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop probe failed.' }
+          ./installer/tests/tsf-interactive-smoke.ps1 -DesktopResult $desktop
+      - name: Upload candidate screenshots
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: personal-input-retest-screenshots
+          path: ${{ runner.temp }}/personal-tsf-screenshots/**/*.bmp
+          if-no-files-found: ignore
+  package-without-trust:
+    name: Diagnose a previously built package without certificate trust
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.package_run_id != '' }}
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: personal-isolation-test-installer
+          path: ${{ runner.temp }}/personal-test-package
+          run-id: ${{ inputs.package_run_id }}
+          github-token: ${{ github.token }}
+      - name: Test without importing the certificate
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/personal-test-package" -Recurse -File)
+          $installers = @($files | Where-Object Name -Like 'ChengjiangIME_Setup_*.exe')
+          $certificates = @($files | Where-Object Name -eq 'dev-build.cer')
+          if ($installers.Count -ne 1 -or $certificates.Count -ne 1) { throw 'Unexpected test artifact contents.' }
+          ./installer/tests/untrusted-uiaccess-ci.ps1 -PersonalInstaller $installers[0].FullName `
+            -DevCertificate $certificates[0].FullName -ResultPath "$env:RUNNER_TEMP/untrusted-result.txt"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ always() }}
+        with:
+          name: untrusted-uiaccess-retest-result
+          path: ${{ runner.temp }}/untrusted-result.txt
+          if-no-files-found: warn
   alternate-admin:
     runs-on: windows-2025
     timeout-minutes: 10
