@@ -94,8 +94,8 @@ int main() {
     CoUninitialize();
     return 1;
   }
-  for (const WORD key : {WORD('N'), WORD('I'), WORD('H'), WORD('A'), WORD('O'),
-                         WORD(VK_SPACE)}) {
+  for (const WORD key :
+       {WORD('N'), WORD('I'), WORD('H'), WORD('A'), WORD('O')}) {
     if (!SendKey(key)) {
       std::cerr << "Could not inject test keystrokes.\n";
       DestroyWindow(window);
@@ -105,6 +105,55 @@ int main() {
     PumpFor(250);
   }
   PumpFor(1500);
+  const HWND candidate =
+      FindWindowW(L"chengjiangime_windows", L"chengjiangimecandwnd");
+  RECT before{};
+  if (!candidate || !IsWindowVisible(candidate) ||
+      !GetWindowRect(candidate, &before)) {
+    std::cerr << "The personal candidate window did not appear.\n";
+    DestroyWindow(window);
+    CoUninitialize();
+    return 1;
+  }
+  if (!SendKey(VK_BACK)) {
+    std::cerr << "Could not inject the backspace key.\n";
+    DestroyWindow(window);
+    CoUninitialize();
+    return 1;
+  }
+  PumpFor(1000);
+  RECT after{};
+  if (!IsWindowVisible(candidate) || !GetWindowRect(candidate, &after)) {
+    std::cerr << "The candidate window disappeared while the composition "
+                 "continued.\n";
+    DestroyWindow(window);
+    CoUninitialize();
+    return 1;
+  }
+  std::cout << "Candidate bounds before backspace: " << before.left << ','
+            << before.top << ' ' << before.right - before.left << 'x'
+            << before.bottom - before.top << "; after: " << after.left << ','
+            << after.top << ' ' << after.right - after.left << 'x'
+            << after.bottom - after.top << "\n";
+  if (after.right - after.left < before.right - before.left ||
+      after.bottom - after.top < before.bottom - before.top ||
+      after.left != before.left || after.top != before.top) {
+    std::cerr << "Candidate size or fixed position was not preserved after "
+                 "backspace.\n";
+    DestroyWindow(window);
+    CoUninitialize();
+    return 1;
+  }
+  for (const WORD key : {WORD('O'), WORD(VK_SPACE)}) {
+    if (!SendKey(key)) {
+      std::cerr << "Could not finish the test composition.\n";
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    PumpFor(500);
+  }
+  PumpFor(1000);
   wchar_t text[256]{};
   GetWindowTextW(edit, text, static_cast<int>(sizeof(text) / sizeof(text[0])));
   bool hasCjk = false;

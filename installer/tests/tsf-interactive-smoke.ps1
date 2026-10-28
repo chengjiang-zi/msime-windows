@@ -16,6 +16,21 @@ if (-not (Test-Path -LiteralPath $DesktopResult -PathType Leaf) -or
 # Replace it with the actual UI Server in this disposable VM before typing.
 Get-Process -Name 'ChengjiangImeServer' -ErrorAction SilentlyContinue | Stop-Process -Force
 $state = Get-ItemProperty -LiteralPath 'HKLM:\Software\Chengjiang\PersonalIME'
+$configPath = Join-Path $state.DataDir 'config.toml'
+$config = [IO.File]::ReadAllText($configPath)
+$settings = @{
+    'candidate_translations' = 'true'
+    'candidate_window_layout' = '"vertical"'
+    'candidate_window_fit_content' = 'false'
+    'candidate_window_follow_cursor' = 'false'
+    'cloud_candidates' = 'false'
+}
+foreach ($entry in $settings.GetEnumerator()) {
+    $pattern = '(?m)^[ \t]*' + [regex]::Escape($entry.Key) + '[ \t]*=[ \t]*[^\r\n#]*'
+    if (-not [regex]::IsMatch($config, $pattern)) { throw "Missing smoke test setting: $($entry.Key)" }
+    $config = [regex]::Replace($config, $pattern, "$($entry.Key) = $($entry.Value)")
+}
+[IO.File]::WriteAllText($configPath, $config, [Text.UTF8Encoding]::new($false))
 $server = Start-Process -FilePath $state.ServerPath -ArgumentList '--watchdog-managed' `
     -WorkingDirectory (Split-Path -Parent $state.ServerPath) -WindowStyle Hidden -PassThru
 Start-Sleep -Seconds 3
