@@ -512,6 +512,15 @@ int main(int argc, char **argv) {
                 << " second=" << secondPoint.x << ',' << secondPoint.y << " target="
                 << point.x << ',' << point.y << " nearest=" << target << "\n";
       ClientToScreen(edit, &point);
+      HWND hit = WindowFromPoint(point);
+      wchar_t hitClass[128]{};
+      if (hit)
+        GetClassNameW(hit, hitClass, static_cast<int>(sizeof(hitClass) / sizeof(hitClass[0])));
+      std::cout << "MOUSE_CARET_WINDOW: screen=" << point.x << ',' << point.y
+                << " is_edit=" << (hit == edit) << " class_codepoints=";
+      for (const wchar_t *p = hitClass; *p; ++p)
+        std::cout << std::hex << static_cast<unsigned int>(*p) << ',';
+      std::cout << std::dec << "\n";
       if (!SetCursorPos(point.x, point.y)) {
         std::cout << "MOUSE_CARET: inconclusive; could not move test pointer.\n";
       } else {
