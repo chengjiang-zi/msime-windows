@@ -627,7 +627,9 @@ begin
     'chengjiangime'
   );
   DataDirPage.Add('');
-  DataDirPage.Values[0] := ResolvePreviousDataDir;
+  { Silent setup still visits custom pages, so initialize from GetDataDir to
+    preserve /DATADIR instead of overwriting it with the previous directory. }
+  DataDirPage.Values[0] := GetDataDir('');
   DataDirPage.Buttons[0].OnClick := @DataDirBrowseClick;
 
 #ifndef LightPackage

@@ -25,7 +25,6 @@ $personalData = Join-Path $personalRoot 'chengjiangime'
 $personalSentinel = Join-Path $personalRoot 'unrelated-user-file.txt'
 $programSentinel = Join-Path $env:ProgramFiles 'chengjiangime\server\unrelated-user-file.txt'
 $baselineInstaller = Join-Path $taskRoot 'upstream-setup.exe'
-$sentinel = Join-Path $originalData 'personal-isolation-sentinel.txt'
 $originalKey = 'HKLM:\Software\Metasequoia\MetasequoiaIME'
 $personalKey = 'HKLM:\Software\Chengjiang\PersonalIME'
 $originalClsid = '{E3062E9A-D834-4637-8958-ED8CFA427D01}'
@@ -105,12 +104,12 @@ if (-not ($languages | Where-Object { $_.LanguageTag -like 'zh-*' })) {
 $code = Run-Installer $baselineInstaller $originalData (Join-Path $taskRoot 'upstream.log')
 if ($code -ne 0) { throw "Upstream installation failed: $code" }
 $originalState = Get-ItemProperty -LiteralPath $originalKey
-if ($originalState.DataDir -ne $originalData) {
-    Write-Host "Expected upstream data path: $originalData"
-    Write-Host "Actual upstream data path: $($originalState.DataDir)"
-    Get-Content -LiteralPath (Join-Path $taskRoot 'upstream.log') | Select-Object -Last 100 | Write-Host
-    throw 'Unexpected upstream data path.'
-}
+# v0.12.0's silent wizard uses its default rather than /DATADIR. The personal
+# installer must protect the actual recorded path, including this case.
+$originalData = [string]$originalState.DataDir
+$expectedOriginalData = Join-Path $env:LOCALAPPDATA 'metasequoiaime'
+if ($originalData -ne $expectedOriginalData) { throw "Unexpected upstream data path: $originalData" }
+$sentinel = Join-Path $originalData 'personal-isolation-sentinel.txt'
 $originalServer = $originalState.ServerPath
 if (-not (Test-Path -LiteralPath (Join-Path $originalData 'msime.db') -PathType Leaf)) {
     throw 'Upstream dictionary was not generated.'
