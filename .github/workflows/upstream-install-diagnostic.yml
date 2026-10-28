@@ -75,6 +75,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Limited launcher configuration failed.' }
           cmake --build $build --config Release --parallel
           if ($LASTEXITCODE -ne 0) { throw 'Limited launcher build failed.' }
+          $smokeBuild = Join-Path $env:RUNNER_TEMP 'personal-tsf-interactive-smoke'
+          cmake -S tests/tsf-interactive-smoke -B $smokeBuild -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'Smoke configuration failed.' }
+          cmake --build $smokeBuild --config Release --parallel
+          if ($LASTEXITCODE -ne 0) { throw 'Smoke build failed.' }
           Get-Process -Name ChengjiangImeWatchdog, ChengjiangImeServer -ErrorAction SilentlyContinue | Stop-Process -Force
           $log = Join-Path $env:RUNNER_TEMP 'limited-input.log'
           & "$build/Release/personal-limited-token-launch.exe" (Get-Command pwsh).Source -NoProfile -File `

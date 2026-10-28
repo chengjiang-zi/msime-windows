@@ -82,14 +82,20 @@ int wmain(int argc, wchar_t **argv) {
     command += L'"' + value + L'"';
   }
   STARTUPINFOW startup{sizeof(startup)};
-  startup.dwFlags = STARTF_USESHOWWINDOW;
+  SECURITY_ATTRIBUTES attributes{sizeof(attributes), nullptr, TRUE};
+  HANDLE nullStream = CreateFileW(L"NUL", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  &attributes, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (nullStream == INVALID_HANDLE_VALUE) return Fail("Open standard stream");
+  startup.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
   startup.wShowWindow = SW_HIDE;
+  startup.hStdInput = startup.hStdOutput = startup.hStdError = nullStream;
   PROCESS_INFORMATION process{};
   // A restricted version of the caller's primary token is eligible for
   // CreateProcessAsUser without assigning an unrelated user's token.
-  const BOOL started = CreateProcessAsUserW(limited, argv[1], command.data(), nullptr, nullptr, FALSE,
+  const BOOL started = CreateProcessAsUserW(limited, argv[1], command.data(), nullptr, nullptr, TRUE,
                                              0, nullptr, nullptr, &startup, &process);
   const DWORD error = GetLastError();
+  CloseHandle(nullStream);
   CloseHandle(limited);
   if (!started) { SetLastError(error); return Fail("CreateProcessAsUserW"); }
   std::cout << "PASS: launched with a medium-integrity restricted token.\n";
