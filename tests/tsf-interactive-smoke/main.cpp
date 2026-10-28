@@ -631,6 +631,11 @@ int main(int argc, char **argv) {
         CoUninitialize();
         return 1;
       }
+      const POINT candidatePoint{cardBounds.left + 60, cardBounds.top + 69};
+      const HWND candidateHit = WindowFromPoint(candidatePoint);
+      std::cout << "CANDIDATE_CLICK_TARGET: point=" << candidatePoint.x << ',' << candidatePoint.y
+                << " is_candidate=" << (candidateHit == cardWindow) << "\n";
+      CaptureCandidate(window, window, L"candidate-click-test-window");
       INPUT click[2]{};
       click[0].type = INPUT_MOUSE;
       click[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
@@ -649,6 +654,10 @@ int main(int argc, char **argv) {
       bool committed = false;
       for (const wchar_t *p = clickedCandidate; *p; ++p)
         committed = committed || (*p >= 0x4e00 && *p <= 0x9fff);
+      std::cout << "CANDIDATE_CLICK_RESULT: ";
+      for (const wchar_t *p = clickedCandidate; *p; ++p)
+        std::cout << std::hex << static_cast<unsigned int>(*p) << ',';
+      std::cout << std::dec << "\n";
       if (!committed) {
         std::cerr << "Clicking the first candidate did not commit Chinese text.\n";
         mouseTracker.Detach();
