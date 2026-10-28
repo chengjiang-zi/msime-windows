@@ -34,10 +34,36 @@ try {
     }
     if ($taskSid.Value -ne $user.SID.Value) { throw 'Task was not registered for the standard user.' }
     Write-Host 'PASS: administrator can register an interactive logon task for the standard user without a password.'
+    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
 
     $compiler = (Get-Command ISCC.exe -CommandType Application -ErrorAction Stop).Source
     $build = Join-Path $env:RUNNER_TEMP $taskName
     New-Item -ItemType Directory -Path $build | Out-Null
+    & $compiler '/Qp' "/O$build" (Join-Path $PSScriptRoot 'watchdog-task-probe.iss')
+    if ($LASTEXITCODE -ne 0) { throw 'Could not compile watchdog task probe.' }
+    $taskResult = Join-Path $build 'task-result.txt'
+    $taskLog = Join-Path $build 'task-probe.log'
+    $taskProbe = Join-Path $build 'watchdog-task-probe.exe'
+    $process = Start-Process -FilePath $taskProbe -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES',
+        "/SID=$($user.SID.Value)", "/TASK=$taskName", "/RESULT=`"$taskResult`"", "/LOG=`"$taskLog`"") `
+        -WindowStyle Hidden -PassThru
+    if (-not $process.WaitForExit(60000)) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        throw 'Inno task probe timed out.'
+    }
+    if (-not (Test-Path -LiteralPath $taskResult) -or [IO.File]::ReadAllText($taskResult).Trim() -ne 'registered') {
+        if (Test-Path -LiteralPath $taskLog) { Get-Content -LiteralPath $taskLog | Select-Object -Last 30 | Write-Host }
+        throw 'Inno task probe did not register the standard user task.'
+    }
+    $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
+    try {
+        $taskSid = ([Security.Principal.NTAccount]::new($task.Principal.UserId)).Translate(
+            [Security.Principal.SecurityIdentifier])
+    } catch {
+        $taskSid = [Security.Principal.SecurityIdentifier]::new($task.Principal.UserId)
+    }
+    if ($taskSid.Value -ne $user.SID.Value) { throw 'Inno task probe registered the wrong user.' }
+    Write-Host 'PASS: Inno registered an interactive task for the standard user.'
     & $compiler '/Qp' "/O$build" (Join-Path $PSScriptRoot 'interactive-user-probe.iss')
     if ($LASTEXITCODE -ne 0) { throw 'Could not compile interactive user probe.' }
     Copy-Item -LiteralPath (Join-Path $build 'interactive-user-probe.exe') -Destination $probeExe
@@ -92,5 +118,5 @@ try {
     if (Test-Path -LiteralPath $probeExe) { Remove-Item -LiteralPath $probeExe -Force }
     if (Test-Path -LiteralPath $probeResult) { Remove-Item -LiteralPath $probeResult -Force }
     if (Test-Path -LiteralPath $probeLog) { Remove-Item -LiteralPath $probeLog -Force }
-    if (Test-Path -LiteralPath $probeRoot) { Remove-Item -LiteralPath $probeRoot -Force }
+    if (Test-Path -LiteralPath $probeRoot) { Remove-Item -LiteralPath $probeRoot -Force -ErrorAction SilentlyContinue }
 }
