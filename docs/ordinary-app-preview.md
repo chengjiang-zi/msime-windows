@@ -11,4 +11,4 @@
 - [构建与测试](https://github.com/chengjiang-zi/msime-windows/actions/runs/40768520074)中的程序确认为 `uiAccess=false`；服务端 14 项测试、与官方版并存、模拟不同管理员账户安装与卸载均通过。
 - 在另一台未导入开发证书的测试机上，真实聚焦输入框中成功提交中文，诊断明确报告 `ordinary-input-worked`。这仍不能证明任意应用、UAC 安全桌面或用户电脑可用。
 - 安装程序 SHA-256 为 `010e0adec42c5f59a8d344132a0081213e949ec9af548d0e9c8bfeed35b06939`。它仍使用自签名开发证书，不是受信任发布者签发的正式版本。
-- 用同一桌面用户 SID 模拟中等完整性且禁用管理员组时，Windows 仍将令牌标记为已提升；[启动测试失败](https://github.com/chengjiang-zi/msime-windows/actions/runs/40772684197)，因此尚未证明真实标准账户可以输入。
+- [权限模拟](https://github.com/chengjiang-zi/msime-windows/actions/runs/40773823076)中，同一桌面用户 SID 的中等完整性令牌禁用了管理员组；服务端和聚焦编辑框均由此令牌直接启动，未导入证书时成功提交中文，候选框退格前后大小一致。Windows 仍将该令牌标记为已提升，这不是一个真正的标准用户账户，不能替代标准账户与真实 UAC 凭据流程的测试。
