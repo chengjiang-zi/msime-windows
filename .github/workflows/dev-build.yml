@@ -353,6 +353,9 @@ jobs:
           ./tests/side-by-side-ci.ps1
           -PersonalInstaller (Join-Path $PWD "Output/ChengjiangIME_Setup_v$env:TARGET_VERSION.exe")
           -DevCertificate $env:DEV_CERT_PATH
+      - name: Test watchdog task creation as a standard user
+        shell: pwsh
+        run: ./installer/tests/standard-user-task-ci.ps1
       - name: Check whether the disposable desktop can receive input
         shell: pwsh
         run: pwsh -STA -File ./installer/tests/interactive-desktop-probe.ps1 -ResultPath "${{ runner.temp }}/desktop-probe.txt"

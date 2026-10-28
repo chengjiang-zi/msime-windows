@@ -161,6 +161,16 @@ if (-not (Test-Path -LiteralPath (Join-Path $personalData 'msime.db') -PathType 
     throw 'Personal dictionary was not generated.'
 }
 if (-not (Is-KeyboardListed $personalProfile)) { throw 'Personal keyboard profile was not added.' }
+$watchdogTask = Get-ScheduledTask -TaskName 'Chengjiang IME Watchdog' -ErrorAction Stop
+$taskPrincipal = $watchdogTask.Principal.UserId
+try {
+    $taskSid = ([Security.Principal.NTAccount]::new($taskPrincipal)).Translate([Security.Principal.SecurityIdentifier])
+} catch {
+    $taskSid = [Security.Principal.SecurityIdentifier]::new($taskPrincipal)
+}
+if ($taskSid.Value -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value) {
+    throw "Watchdog task belongs to the wrong user: $taskPrincipal"
+}
 foreach ($view in @([Microsoft.Win32.RegistryView]::Registry64, [Microsoft.Win32.RegistryView]::Registry32)) {
     if ((Get-RegisteredDll $personalClsid $view) -notmatch '(?i)\\IME\\ChengjiangIME\\') {
         throw "Personal TSF registration did not use the isolated directory in $view."

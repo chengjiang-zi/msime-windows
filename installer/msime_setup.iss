@@ -1102,13 +1102,15 @@ begin
   ResultCode := -1;
   WatchdogPath := ExpandConstant(
     '{commonpf64}\chengjiangime\server\{#MyWatchdogName}');
-  { /F replaces the same fixed-name task during an upgrade. /IT keeps the
-    task in the interactive user's session; LIMITED avoids an elevated token. }
+  { Run schtasks as the user who started Setup, not the account supplying UAC
+    credentials. Without /RU, schtasks assigns the task to its own user; /IT
+    and LIMITED keep the watchdog in that user's interactive session. }
   Params :=
     '/Create /F /TN "{#MyWatchdogTaskName}" /SC ONLOGON ' +
     '/RL LIMITED /IT /TR "\"' + WatchdogPath + '\""';
   if
-    (not Exec(
+    (not ShellExecAsOriginalUser(
+      '',
       ExpandConstant('{sys}\schtasks.exe'),
       Params,
       '',
