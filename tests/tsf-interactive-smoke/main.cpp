@@ -266,12 +266,15 @@ int main(int argc, char **argv) {
                    argument != "--mouse-caret-region" &&
                    argument != "--mouse-caret-region-keep" &&
                    argument != "--mouse-caret-region-consume" &&
-                   argument != "--mouse-caret-region-down")) {
+                   argument != "--mouse-caret-region-down" &&
+                   argument != "--mouse-caret-region-no-sink")) {
     std::cerr << "Unexpected interactive smoke-test arguments.\n";
     return 1;
   }
   const bool consumeClick = argument == "--mouse-caret-region-consume" || argument == "--mouse-caret-region-down";
-  const bool keepRegion = argument == "--mouse-caret-region-keep" || consumeClick;
+  const bool noSink = argument == "--mouse-caret-region-no-sink";
+  const bool checkCapture = consumeClick || noSink;
+  const bool keepRegion = argument == "--mouse-caret-region-keep" || checkCapture;
   const bool testRegion = argument == "--mouse-caret-region" || keepRegion;
   const bool richEdit = argument == "--mouse-caret-richedit" || testRegion;
   const bool testMouseCaret = argument == "--mouse-caret-diagnostic" || richEdit;
@@ -564,7 +567,7 @@ int main(int argc, char **argv) {
     MouseTrackerRegistration mouseTracker;
     mouseTracker.probe->consumeLeftClick = consumeClick;
     mouseTracker.probe->consumeMouseUp = argument != "--mouse-caret-region-down";
-    const bool trackerAttached = richEdit &&
+    const bool trackerAttached = richEdit && !noSink &&
         AttachMouseTracker(mouseTracker.probe, &mouseTracker.tracker, &mouseTracker.cookie);
     CandidateRegionExperiment region;
     if (testRegion) {
@@ -586,6 +589,12 @@ int main(int argc, char **argv) {
     if (consumeClick && (!trackerAttached || !region.applied)) {
       std::cerr << "Mouse sink or region was not available for the consume experiment.\n";
       mouseTracker.Detach();
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    if (noSink && !region.applied) {
+      std::cerr << "Region was not available for the no-sink experiment.\n";
       DestroyWindow(window);
       CoUninitialize();
       return 1;
@@ -686,11 +695,11 @@ int main(int argc, char **argv) {
       // unclickable. Use the default vertical skin in the disposable desktop.
       mouseTracker.Detach();
       const bool hadEditCapture = GetCapture() == edit;
-      if (hadEditCapture && !consumeClick)
+      if (hadEditCapture && !checkCapture)
         ReleaseCapture();
-      std::cout << "CANDIDATE_CAPTURE_RELEASED_FOR_DIAGNOSTIC: " << (hadEditCapture && !consumeClick) << "\n";
-      if (consumeClick && hadEditCapture) {
-        std::cerr << "Consuming the mouse click left the edit control capturing the mouse.\n";
+      std::cout << "CANDIDATE_CAPTURE_RELEASED_FOR_DIAGNOSTIC: " << (hadEditCapture && !checkCapture) << "\n";
+      if (checkCapture && hadEditCapture) {
+        std::cerr << "The edit control is still capturing the mouse.\n";
         mouseTracker.Detach();
         DestroyWindow(window);
         CoUninitialize();

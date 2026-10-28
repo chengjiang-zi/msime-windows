@@ -36,6 +36,7 @@ $scenarios = @(
 if ($ProbeMouseCaret) {
     $scenarios += @{ Name = 'mouse-caret'; Layout = 'vertical'; PageSize = 6 }
     $scenarios += @{ Name = 'mouse-caret-richedit'; Layout = 'vertical'; PageSize = 6 }
+    $scenarios += @{ Name = 'mouse-caret-region-no-sink'; Layout = 'vertical'; PageSize = 6 }
     $scenarios += @{ Name = 'mouse-caret-region-down'; Layout = 'vertical'; PageSize = 6 }
     $scenarios += @{ Name = 'mouse-caret-region-consume'; Layout = 'vertical'; PageSize = 6 }
     $scenarios += @{ Name = 'mouse-caret-region-keep'; Layout = 'vertical'; PageSize = 6 }
@@ -79,6 +80,7 @@ foreach ($scenario in $scenarios) {
     $arguments = @(if ($layout -eq 'horizontal') { "--horizontal-navigation=$pageSize" }
         elseif ($scenario.Name -eq 'mouse-caret') { '--mouse-caret-diagnostic' }
         elseif ($scenario.Name -eq 'mouse-caret-richedit') { '--mouse-caret-richedit' }
+        elseif ($scenario.Name -eq 'mouse-caret-region-no-sink') { '--mouse-caret-region-no-sink' }
         elseif ($scenario.Name -eq 'mouse-caret-region-down') { '--mouse-caret-region-down' }
         elseif ($scenario.Name -eq 'mouse-caret-region-consume') { '--mouse-caret-region-consume' }
         elseif ($scenario.Name -eq 'mouse-caret-region') { '--mouse-caret-region' }
