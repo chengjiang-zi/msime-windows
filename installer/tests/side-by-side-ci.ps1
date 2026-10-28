@@ -20,7 +20,9 @@ if (-not $taskRoot.StartsWith($runnerRoot, [StringComparison]::OrdinalIgnoreCase
 }
 New-Item -ItemType Directory -Path $taskRoot | Out-Null
 $originalData = Join-Path $taskRoot 'upstream-data'
-$personalData = Join-Path $taskRoot 'personal-data'
+$personalRoot = Join-Path $taskRoot 'personal-data'
+$personalData = Join-Path $personalRoot 'chengjiangime'
+$personalSentinel = Join-Path $personalRoot 'unrelated-user-file.txt'
 $baselineInstaller = Join-Path $taskRoot 'upstream-setup.exe'
 $sentinel = Join-Path $originalData 'personal-isolation-sentinel.txt'
 $originalKey = 'HKLM:\Software\Metasequoia\MetasequoiaIME'
@@ -130,7 +132,11 @@ if (-not (Test-Path -LiteralPath $blockedLog -PathType Leaf) -or
 }
 Assert-OriginalIntact $originalServer $originalProcess.Id
 
-$code = Run-Installer $PersonalInstaller $personalData (Join-Path $taskRoot 'personal.log')
+# A nonempty selected directory belongs to the user, so installation must use
+# a child directory and leave its existing content intact after uninstall.
+New-Item -ItemType Directory -Path $personalRoot | Out-Null
+[IO.File]::WriteAllText($personalSentinel, 'unrelated user file')
+$code = Run-Installer $PersonalInstaller $personalRoot (Join-Path $taskRoot 'personal.log')
 if ($code -ne 0) { throw "Personal installation failed: $code" }
 $personalState = Get-ItemProperty -LiteralPath $personalKey
 if ($personalState.DataDir -ne $personalData -or $personalState.ServerPath -notmatch 'ChengjiangImeServer\.exe$') {
@@ -182,6 +188,9 @@ $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/VERYSILENT', '
     -WindowStyle Hidden -Wait -PassThru
 if ($uninstall.ExitCode -ne 0) { throw "Personal uninstall failed: $($uninstall.ExitCode)" }
 Assert-OriginalIntact $originalServer $originalProcess.Id
+if ([IO.File]::ReadAllText($personalSentinel) -ne 'unrelated user file') {
+    throw 'Personal uninstall changed an unrelated file in the selected parent directory.'
+}
 if (Is-KeyboardListed $personalProfile) { throw 'Personal keyboard profile remained after uninstall.' }
 $remaining = Get-ItemProperty -LiteralPath $personalKey -ErrorAction SilentlyContinue
 if ($remaining) {

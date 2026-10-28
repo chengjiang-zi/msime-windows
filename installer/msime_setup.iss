@@ -425,16 +425,13 @@ begin
     end;
 end;
 
-{ 只有这两种目录允许整目录清理：标记里写明是安装器在空目录上接手的，
-  以及历史默认位置（老版本装的，那时还没有标记文件，而且它的名字本身就是输入法专用的）。}
+{ 个人版没有历史安装需要兼容：只有安装器在空目录上接手并标记过的
+  数据目录才能整目录清理。默认路径也不能例外。}
 function OwnsDataDirExclusively(const Directory: String): Boolean;
 begin
   Result :=
     (Directory <> '') and
-    ((CompareText(
-        Directory,
-        ExpandConstant('{localappdata}\chengjiangime')) = 0) or
-     (DataDirHasMarker(Directory) and DataDirMarkerIsExclusive(Directory)));
+    DataDirHasMarker(Directory) and DataDirMarkerIsExclusive(Directory);
 end;
 
 { Exclusive 只能在确认目录接手时为空（或本来就归我们）时传 True。
@@ -448,7 +445,7 @@ begin
     if DataDirMarkerIsExclusive(Directory) then
       exit;
     SetArrayLength(Lines, 2);
-    Lines[0] := 'Metasequoia IME user data directory.';
+    Lines[0] := 'Chengjiang IME personal edition user data directory.';
     Lines[1] := DataDirExclusiveTag;
   end
   else
@@ -456,7 +453,7 @@ begin
     if DataDirHasMarker(Directory) then
       exit;
     SetArrayLength(Lines, 1);
-    Lines[0] := 'Metasequoia IME user data directory.';
+    Lines[0] := 'Chengjiang IME personal edition user data directory.';
   end;
   SaveStringsToFile(DataDirMarkerPath(Directory), Lines, False);
 end;
@@ -502,7 +499,7 @@ begin
 
   if (Length(Directory) < 4) or (Directory[2] <> ':') or (Directory[3] <> '\') then
   begin
-    Result := '请填写本机磁盘上的完整路径，例如 D:\MetasequoiaIME。';
+    Result := '请填写本机磁盘上的完整路径，例如 D:\ChengjiangIME。';
     exit;
   end;
   if not DirExists(Copy(Directory, 1, 3)) then
@@ -1194,18 +1191,6 @@ begin
   RemoveDir(Directory);
 end;
 
-{ 旧版 WebView2 的用户数据（浏览器缓存、Cookie 等）。界面改由 Direct2D 绘制后不再有人
-  读写它们，覆盖安装和卸载都清掉。正常情况下在 ProgramData 下；那里不可写时旧版 Server
-  退到历史默认数据目录下的同名子目录，那个目录整个归我们，按名字删是安全的。}
-procedure RemoveLegacyWebView2UserData;
-begin
-  TryDeleteTree(ExpandConstant('{commonappdata}\chengjiangime\webview2'));
-  TryDeleteTree(ExpandConstant('{commonappdata}\chengjiangime\webview2-settings'));
-  RemoveDir(ExpandConstant('{commonappdata}\chengjiangime'));
-  TryDeleteTree(ExpandConstant('{localappdata}\chengjiangime\webview2'));
-  TryDeleteTree(ExpandConstant('{localappdata}\chengjiangime\webview2-settings'));
-end;
-
 #ifdef LightPackage
 { 轻量包只替换数据目录里的个别子目录。整个目录归我们时整个删；只有旧版标记时（#537）
   按 DeleteKnownAppDataDir 的规则只删输入法自己写进去的部分。}
@@ -1765,7 +1750,6 @@ begin
   { 目标词库已安全移除，再清理旧的随包资源。用户配置和外部皮肤目录在这里保留。}
   CleanAppDataExceptUserFiles;
 #endif
-  RemoveLegacyWebView2UserData;
   TryDeleteTree(ExpandConstant(
     '{commonpf64}\chengjiangime\server'));
   TryDeleteOldVersionDirs(TsfRoot32);
@@ -1874,10 +1858,8 @@ begin
     TryDeleteTree(ExpandConstant('{commonpf64}\chengjiangime'));
     { 数据目录可能被用户指到了别的盘，甚至指到一个本来就有文件的文件夹（#537）。}
     RemoveDataDir(ResolvePreviousDataDir);
-    { 旧版 WebView2 的用户数据，见 RemoveLegacyWebView2UserData。}
-    RemoveLegacyWebView2UserData;
-    { 数据目录在别处时，历史默认位置里可能只剩上面删掉的那两样；还有别的东西就删不掉，原样留着。}
+    { 删除空目录时不会触碰其余文件。个人版没有需要清理的旧版 WebView 数据。}
     RemoveDir(ExpandConstant('{localappdata}\chengjiangime'));
-    TryDeleteTree(ExpandConstant('{commonappdata}\chengjiangime'));
+    RemoveDir(ExpandConstant('{commonappdata}\chengjiangime'));
   end;
 end;
