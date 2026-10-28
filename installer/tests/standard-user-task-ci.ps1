@@ -36,6 +36,22 @@ try {
     Write-Host 'PASS: administrator can register an interactive logon task for the standard user without a password.'
     Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
 
+    $service = New-Object -ComObject 'Schedule.Service'
+    $service.Connect()
+    $folder = $service.GetFolder('\')
+    $definition = $service.NewTask(0)
+    $definition.Principal.UserId = $user.SID.Value
+    $definition.Principal.LogonType = 3
+    $definition.Principal.RunLevel = 0
+    $trigger = $definition.Triggers.Create(9)
+    $trigger.UserId = $user.SID.Value
+    $taskAction = $definition.Actions.Create(0)
+    $taskAction.Path = Join-Path $env:SystemRoot 'System32\notepad.exe'
+    $registered = $folder.RegisterTaskDefinition($taskName, $definition, 6, $user.SID.Value, $null, 3, $null)
+    if (-not $registered) { throw 'Direct scheduler COM registration returned no task.' }
+    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
+    Write-Host 'PASS: scheduler COM accepts the standard user SID.'
+
     $compiler = (Get-Command ISCC.exe -CommandType Application -ErrorAction Stop).Source
     $build = Join-Path $env:RUNNER_TEMP $taskName
     New-Item -ItemType Directory -Path $build | Out-Null
