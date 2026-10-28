@@ -68,15 +68,24 @@ public:
     if (!eaten)
       return E_INVALIDARG;
     *eaten = FALSE;
+    if (consumeLeftClick && (buttons & MK_LBUTTON)) {
+      consumedDown_ = true;
+      *eaten = TRUE;
+    } else if (consumeLeftClick && consumedDown_) {
+      consumedDown_ = false;
+      *eaten = TRUE;
+    }
     ++events;
     std::cout << "MOUSE_TRACKER_EVENT: edge=" << edge << " quadrant=" << quadrant
               << " buttons=" << buttons << "\n";
     return S_OK;
   }
   unsigned events = 0;
+  bool consumeLeftClick = false;
 
 private:
   ULONG references_ = 1;
+  bool consumedDown_ = false;
 };
 
 // The test app observes, but never consumes, mouse events over the current
@@ -247,11 +256,13 @@ int main(int argc, char **argv) {
                    argument != "--mouse-caret-diagnostic" &&
                    argument != "--mouse-caret-richedit" &&
                    argument != "--mouse-caret-region" &&
-                   argument != "--mouse-caret-region-keep")) {
+                   argument != "--mouse-caret-region-keep" &&
+                   argument != "--mouse-caret-region-consume")) {
     std::cerr << "Unexpected interactive smoke-test arguments.\n";
     return 1;
   }
-  const bool keepRegion = argument == "--mouse-caret-region-keep";
+  const bool consumeClick = argument == "--mouse-caret-region-consume";
+  const bool keepRegion = argument == "--mouse-caret-region-keep" || consumeClick;
   const bool testRegion = argument == "--mouse-caret-region" || keepRegion;
   const bool richEdit = argument == "--mouse-caret-richedit" || testRegion;
   const bool testMouseCaret = argument == "--mouse-caret-diagnostic" || richEdit;
@@ -511,8 +522,9 @@ int main(int argc, char **argv) {
     if (!CaptureCandidate(window, window, L"mouse-caret-test-window"))
       std::cerr << "Could not capture the disposable mouse test window.\n";
     MouseTrackerRegistration mouseTracker;
-    if (richEdit)
-      AttachMouseTracker(mouseTracker.probe, &mouseTracker.tracker, &mouseTracker.cookie);
+    mouseTracker.probe->consumeLeftClick = consumeClick;
+    const bool trackerAttached = richEdit &&
+        AttachMouseTracker(mouseTracker.probe, &mouseTracker.tracker, &mouseTracker.cookie);
     CandidateRegionExperiment region;
     if (testRegion) {
       region.window = FindWindowW(L"chengjiangime_windows", L"chengjiangimecandwnd");
@@ -529,6 +541,13 @@ int main(int argc, char **argv) {
       PumpFor(500);
       if (!CaptureCandidate(window, window, L"mouse-caret-region-window"))
         std::cerr << "Could not capture the disposable region experiment.\n";
+    }
+    if (consumeClick && (!trackerAttached || !region.applied)) {
+      std::cerr << "Mouse sink or region was not available for the consume experiment.\n";
+      mouseTracker.Detach();
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
     }
     if (!*preedit || first == -1 || second == -1) {
       std::cout << "MOUSE_CARET: inconclusive; inline preedit positions unavailable"
@@ -569,6 +588,13 @@ int main(int argc, char **argv) {
         }
         PumpFor(500);
         std::cout << "MOUSE_TRACKER_COUNT: " << mouseTracker.probe->events << "\n";
+        if (consumeClick && mouseTracker.probe->events < 2) {
+          std::cerr << "The mouse sink did not receive the click.\n";
+          mouseTracker.Detach();
+          DestroyWindow(window);
+          CoUninitialize();
+          return 1;
+        }
         DWORD selectionStart = 0;
         DWORD selectionEnd = 0;
         SendMessageW(edit, EM_GETSEL, reinterpret_cast<WPARAM>(&selectionStart),
@@ -609,9 +635,16 @@ int main(int argc, char **argv) {
       // unclickable. Use the default vertical skin in the disposable desktop.
       mouseTracker.Detach();
       const bool hadEditCapture = GetCapture() == edit;
-      if (hadEditCapture)
+      if (hadEditCapture && !consumeClick)
         ReleaseCapture();
-      std::cout << "CANDIDATE_CAPTURE_RELEASED_FOR_DIAGNOSTIC: " << hadEditCapture << "\n";
+      std::cout << "CANDIDATE_CAPTURE_RELEASED_FOR_DIAGNOSTIC: " << (hadEditCapture && !consumeClick) << "\n";
+      if (consumeClick && hadEditCapture) {
+        std::cerr << "Consuming the mouse click left the edit control capturing the mouse.\n";
+        mouseTracker.Detach();
+        DestroyWindow(window);
+        CoUninitialize();
+        return 1;
+      }
       if (!keepRegion && region.applied && IsWindow(region.window)) {
         SetWindowRgn(region.window, nullptr, TRUE);
         region.applied = false;
