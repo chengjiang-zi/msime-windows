@@ -51,9 +51,20 @@ try {
     }
     Remove-Item -LiteralPath $probeResult -Force
     $credential = [Management.Automation.PSCredential]::new($account, $password)
-    $process = Start-Process -FilePath $probeExe -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES',
-        "/RESULT=`"$probeResult`"", "/LOG=`"$probeLog`"") -Credential $credential -LoadUserProfile `
-        -WorkingDirectory $probeRoot -WindowStyle Hidden -PassThru
+    # Start-Process -Credential inherits the runner's environment, including
+    # its private TEMP directory. Give the child a writable temporary directory.
+    $previousTemp = $env:TEMP
+    $previousTmp = $env:TMP
+    try {
+        $env:TEMP = $probeRoot
+        $env:TMP = $probeRoot
+        $process = Start-Process -FilePath $probeExe -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES',
+            "/RESULT=`"$probeResult`"", "/LOG=`"$probeLog`"") -Credential $credential -LoadUserProfile `
+            -WorkingDirectory $probeRoot -WindowStyle Hidden -PassThru
+    } finally {
+        $env:TEMP = $previousTemp
+        $env:TMP = $previousTmp
+    }
     if (-not $process.WaitForExit(60000)) {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         throw 'Different-account shell-user probe timed out.'
