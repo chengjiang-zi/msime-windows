@@ -18,14 +18,20 @@ try {
     $exe = Join-Path $env:SystemRoot 'System32\schtasks.exe'
     $arguments = @('/Create', '/F', '/TN', "`"$taskName`"", '/SC', 'ONLOGON', '/RL', 'LIMITED', '/IT',
         '/TR', "`"$env:SystemRoot\System32\notepad.exe`"")
+    $stdout = Join-Path $env:RUNNER_TEMP ($taskName + '-stdout.txt')
+    $stderr = Join-Path $env:RUNNER_TEMP ($taskName + '-stderr.txt')
     $process = Start-Process -FilePath $exe -ArgumentList $arguments -Credential $credential `
-        -LoadUserProfile -WindowStyle Hidden -PassThru
+        -LoadUserProfile -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
     if (-not $process.WaitForExit(60000)) {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         throw 'Standard-user scheduled task creation timed out.'
     }
     $process.Refresh()
-    if ($process.ExitCode -ne 0) { throw "Standard-user scheduled task creation failed: $($process.ExitCode)" }
+    if ($process.ExitCode -ne 0) {
+        if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout | Write-Host }
+        if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr | Write-Host }
+        throw "Standard-user scheduled task creation failed: $($process.ExitCode)"
+    }
     $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
     try {
         $taskSid = ([Security.Principal.NTAccount]::new($task.Principal.UserId)).Translate(
