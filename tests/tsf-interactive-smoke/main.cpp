@@ -43,6 +43,118 @@ bool SendKey(WORD key) {
   return SendInput(2, input, sizeof(INPUT)) == 2;
 }
 
+class MouseTrackerProbe final : public ITfMouseSink {
+public:
+  STDMETHODIMP QueryInterface(REFIID iid, void **object) override {
+    if (!object)
+      return E_INVALIDARG;
+    *object = nullptr;
+    if (iid == IID_IUnknown || iid == __uuidof(ITfMouseSink)) {
+      *object = static_cast<ITfMouseSink *>(this);
+      AddRef();
+      return S_OK;
+    }
+    return E_NOINTERFACE;
+  }
+  STDMETHODIMP_(ULONG) AddRef() override { return ++references_; }
+  STDMETHODIMP_(ULONG) Release() override {
+    const ULONG remaining = --references_;
+    if (!remaining)
+      delete this;
+    return remaining;
+  }
+  STDMETHODIMP OnMouseEvent(ULONG edge, ULONG quadrant, DWORD buttons,
+                           BOOL *eaten) override {
+    if (!eaten)
+      return E_INVALIDARG;
+    *eaten = FALSE;
+    ++events;
+    std::cout << "MOUSE_TRACKER_EVENT: edge=" << edge << " quadrant=" << quadrant
+              << " buttons=" << buttons << "\n";
+    return S_OK;
+  }
+  unsigned events = 0;
+
+private:
+  ULONG references_ = 1;
+};
+
+// The test app observes, but never consumes, mouse events over the current
+// TSF composition. Failure is diagnostic: a host need not expose a tracker.
+bool AttachMouseTracker(MouseTrackerProbe *probe, ITfMouseTracker **tracker,
+                        DWORD *cookie) {
+  *tracker = nullptr;
+  *cookie = TF_INVALID_COOKIE;
+  using GetThreadMgr = HRESULT(WINAPI *)(ITfThreadMgr **);
+  const HMODULE module = GetModuleHandleW(L"msctf.dll");
+  const auto getThreadMgr = module ? reinterpret_cast<GetThreadMgr>(
+                                        GetProcAddress(module, "TF_GetThreadMgr"))
+                                   : nullptr;
+  ITfThreadMgr *manager = nullptr;
+  ITfDocumentMgr *document = nullptr;
+  ITfContext *context = nullptr;
+  ITfContextComposition *compositions = nullptr;
+  IEnumITfCompositionView *enumerator = nullptr;
+  ITfCompositionView *view = nullptr;
+  ITfRange *range = nullptr;
+  HRESULT hr = getThreadMgr ? getThreadMgr(&manager) : E_NOINTERFACE;
+  if (SUCCEEDED(hr) && manager)
+    hr = manager->GetFocus(&document);
+  if (SUCCEEDED(hr) && document)
+    hr = document->GetTop(&context);
+  if (SUCCEEDED(hr) && context)
+    hr = context->QueryInterface(__uuidof(ITfContextComposition),
+                                 reinterpret_cast<void **>(&compositions));
+  if (SUCCEEDED(hr) && compositions)
+    hr = compositions->EnumCompositions(&enumerator);
+  ULONG fetched = 0;
+  if (SUCCEEDED(hr) && enumerator)
+    hr = enumerator->Next(1, &view, &fetched);
+  if (hr == S_OK && fetched == 1 && view)
+    hr = view->GetRange(&range);
+  else if (SUCCEEDED(hr))
+    hr = E_FAIL;
+  if (SUCCEEDED(hr) && context)
+    hr = context->QueryInterface(__uuidof(ITfMouseTracker),
+                                 reinterpret_cast<void **>(tracker));
+  if (SUCCEEDED(hr) && *tracker && range)
+    hr = (*tracker)->AdviseMouseSink(range, probe, cookie);
+  if (range) range->Release();
+  if (view) view->Release();
+  if (enumerator) enumerator->Release();
+  if (compositions) compositions->Release();
+  if (context) context->Release();
+  if (document) document->Release();
+  if (manager) manager->Release();
+  if (FAILED(hr) && *tracker) {
+    (*tracker)->Release();
+    *tracker = nullptr;
+  }
+  std::cout << "MOUSE_TRACKER_ATTACH: hr=0x" << std::hex
+            << static_cast<unsigned long>(hr) << std::dec << "\n";
+  return SUCCEEDED(hr) && *tracker && *cookie != TF_INVALID_COOKIE;
+}
+
+struct MouseTrackerRegistration {
+  MouseTrackerProbe *probe = new MouseTrackerProbe;
+  ITfMouseTracker *tracker = nullptr;
+  DWORD cookie = TF_INVALID_COOKIE;
+  void Detach() {
+    if (tracker && cookie != TF_INVALID_COOKIE)
+      tracker->UnadviseMouseSink(cookie);
+    cookie = TF_INVALID_COOKIE;
+    if (tracker) {
+      tracker->Release();
+      tracker = nullptr;
+    }
+    if (probe) {
+      probe->Release();
+      probe = nullptr;
+    }
+  }
+  ~MouseTrackerRegistration() { Detach(); }
+};
+
 // Capture only the disposable test candidate window for visual review.
 bool CaptureCandidate(HWND window, HWND background, const wchar_t *name) {
   wchar_t directory[MAX_PATH]{};
@@ -383,6 +495,9 @@ int main(int argc, char **argv) {
     }
     if (!CaptureCandidate(window, window, L"mouse-caret-test-window"))
       std::cerr << "Could not capture the disposable mouse test window.\n";
+    MouseTrackerRegistration mouseTracker;
+    if (richEdit)
+      AttachMouseTracker(mouseTracker.probe, &mouseTracker.tracker, &mouseTracker.cookie);
     if (!*preedit || first == -1 || second == -1) {
       std::cout << "MOUSE_CARET: inconclusive; inline preedit positions unavailable"
                 << " (length=" << std::wcslen(preedit) << ", first=" << first
@@ -406,11 +521,13 @@ int main(int argc, char **argv) {
         click[1] = click[0];
         click[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
         if (SendInput(2, click, sizeof(INPUT)) != 2) {
+          mouseTracker.Detach();
           DestroyWindow(window);
           CoUninitialize();
           return 1;
         }
         PumpFor(500);
+        std::cout << "MOUSE_TRACKER_COUNT: " << mouseTracker.probe->events << "\n";
         DWORD selectionStart = 0;
         DWORD selectionEnd = 0;
         SendMessageW(edit, EM_GETSEL, reinterpret_cast<WPARAM>(&selectionStart),
@@ -418,12 +535,14 @@ int main(int argc, char **argv) {
         wchar_t clicked[256]{};
         GetWindowTextW(edit, clicked, static_cast<int>(sizeof(clicked) / sizeof(clicked[0])));
         if (!SendKey(WORD('X'))) {
+          mouseTracker.Detach();
           DestroyWindow(window);
           CoUninitialize();
           return 1;
         }
         PumpFor(500);
         if (!SendKey(VK_RETURN)) {
+          mouseTracker.Detach();
           DestroyWindow(window);
           CoUninitialize();
           return 1;
