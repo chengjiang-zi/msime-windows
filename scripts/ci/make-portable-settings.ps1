@@ -22,8 +22,8 @@ param(
 #     run-settings.cmd               双击即可运行，帮你设好数据目录
 #     README.txt                     说明它是什么、不能做什么
 #
-# 数据目录用 run-settings.cmd 里的 CHENGJIANG_IME_DATA_DIR 指向包内的 data\，不碰注册表，
-# 也不碰 %LOCALAPPDATA% 里已安装版本的配置。删掉整个目录就是卸载。
+# 默认数据目录用 CHENGJIANG_IME_DATA_DIR 指向包内的 data\；设置页仍可能暴露系统操作，
+# 因此在完成隔离审计前不发布此预览包。
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -95,7 +95,7 @@ if (Test-Path -LiteralPath $factoryConfig) {
 $launcher = @'
 @echo off
 rem Portable preview of the settings window.
-rem   run-settings.cmd        isolated: data lives in .\data, nothing touches this machine
+rem   run-settings.cmd        data lives in .\data; system actions are not yet isolated
 rem   run-settings.cmd live   live: uses the installed copy's data directory and config
 setlocal
 set "CHENGJIANG_IME_SETTINGS_INSTANCE=portable"
@@ -120,15 +120,16 @@ $readme = @"
 水杉输入法个人版 设置预览包 v$TargetVersion
 
 这个压缩包只包含设置窗口，用来查看界面，不是可以输入中文的输入法。
-它不写注册表、不装 TSF、不需要管理员权限，也不需要导入任何证书。
+默认配置保存在压缩包内；设置界面的部分系统操作尚未完成隔离审计。
+这个预览包目前禁用，不应在日常电脑上运行。
 
 怎么用
   1. 解压到普通目录，别放 Program Files：那里需要管理员权限才能写。
   2. 双击 run-settings.cmd。
-  3. 默认模式下看完直接删掉整个目录，不留任何痕迹。
+  3. 默认模式的配置保存在解压目录中；删除目录可移除这些配置。
 
 两种启动方式
-  run-settings.cmd          用包内的空白配置，改动不影响本机已装的版本
+  run-settings.cmd          用包内的空白配置；系统级操作仍可能影响本机
   run-settings.cmd live     用本机已装个人版的真实配置，查看并修改个人版设置
 
 live 模式的注意事项
