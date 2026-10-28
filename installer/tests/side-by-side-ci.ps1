@@ -277,7 +277,13 @@ Write-Host 'Side-by-side install, overlap rejection and personal uninstall prese
 # Reverse the uninstall order as well: reinstall the personal edition, then
 # remove upstream while the personal Server is running.
 $code = Run-Installer $PersonalInstaller $personalRoot (Join-Path $taskRoot 'personal-reinstall.log')
-if ($code -ne 0) { throw "Personal reinstall failed: $code" }
+if ($code -ne 0) {
+    Get-Content -LiteralPath (Join-Path $taskRoot 'personal-reinstall.log') | Select-Object -Last 80 | Write-Host
+    if (Test-Path -LiteralPath $personalData) {
+        Get-ChildItem -LiteralPath $personalData -Force | Select-Object -First 50 -ExpandProperty FullName | Write-Host
+    }
+    throw "Personal reinstall failed: $code"
+}
 $personalState = Get-ItemProperty -LiteralPath $personalKey
 $reverseSentinel = Join-Path $personalData 'reverse-uninstall-sentinel.txt'
 [IO.File]::WriteAllText($reverseSentinel, 'personal data must remain untouched')
