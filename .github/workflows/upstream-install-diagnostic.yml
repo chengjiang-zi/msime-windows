@@ -25,6 +25,103 @@ permissions:
   actions: read
 
 jobs:
+  standard-desktop:
+    name: Test ordinary preview as a temporary standard user
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.package_run_id != '' }}
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: personal-isolation-test-installer
+          path: ${{ runner.temp }}/personal-test-package
+          run-id: ${{ inputs.package_run_id }}
+          github-token: ${{ github.token }}
+      - name: Test a real temporary standard account without certificate trust
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted') { throw 'Disposable runner required.' }
+          $files = @(Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/personal-test-package" -Recurse -File)
+          $installers = @($files | Where-Object Name -Like 'ChengjiangIME_Setup_*.exe')
+          $certificates = @($files | Where-Object Name -eq 'dev-build.cer')
+          if ($installers.Count -ne 1 -or $certificates.Count -ne 1) { throw 'Unexpected test artifact contents.' }
+          $cert = [Security.Cryptography.X509Certificates.X509Certificate2]::new($certificates[0].FullName)
+          $signature = Get-AuthenticodeSignature -LiteralPath $installers[0].FullName
+          if ($cert.Subject -ne 'CN=Chengjiang IME Personal Dev Build Code Signing' -or
+              -not $signature.SignerCertificate -or $signature.SignerCertificate.Thumbprint -ne $cert.Thumbprint -or
+              $signature.Status -eq 'Valid') { throw 'Unexpected or trusted development signature.' }
+          foreach ($store in @('Cert:\LocalMachine\Root', 'Cert:\LocalMachine\TrustedPublisher',
+                               'Cert:\CurrentUser\Root', 'Cert:\CurrentUser\TrustedPublisher')) {
+            if (Get-ChildItem -LiteralPath $store | Where-Object Thumbprint -eq $cert.Thumbprint) { throw 'Certificate is trusted.' }
+          }
+          $languages = Get-WinUserLanguageList
+          if (-not ($languages | Where-Object { $_.LanguageTag -like 'zh-*' })) {
+            $languages.Add('zh-Hans-CN'); Set-WinUserLanguageList -LanguageList $languages -Force
+          }
+          $setup = Start-Process -FilePath $installers[0].FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -WindowStyle Hidden -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Personal setup failed: $($setup.ExitCode)" }
+          $desktop = Join-Path $env:RUNNER_TEMP 'standard-desktop.txt'
+          & pwsh -STA -File ./installer/tests/interactive-desktop-probe.ps1 -ResultPath $desktop
+          if ($LASTEXITCODE -ne 0 -or [IO.File]::ReadAllText($desktop).Trim() -ne 'interactive') { throw 'No interactive desktop.' }
+          $build = Join-Path $env:RUNNER_TEMP 'standard-desktop-build'
+          cmake -S tests/standard-user-desktop -B $build -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'Standard launcher configuration failed.' }
+          cmake --build $build --config Release --parallel
+          if ($LASTEXITCODE -ne 0) { throw 'Standard launcher build failed.' }
+          $smokeBuild = Join-Path $env:RUNNER_TEMP 'standard-input-build'
+          cmake -S tests/tsf-interactive-smoke -B $smokeBuild -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'Smoke configuration failed.' }
+          cmake --build $smokeBuild --config Release --parallel
+          if ($LASTEXITCODE -ne 0) { throw 'Smoke build failed.' }
+          $suffix = [Guid]::NewGuid().ToString('N').Substring(0, 8)
+          $userName = "cjstandard$suffix"
+          $password = [Guid]::NewGuid().ToString('N') + 'aA9!'
+          $createdUser = $false
+          $probeDir = Join-Path $env:PUBLIC "cj-standard-probe-$suffix"
+          try {
+            $account = New-LocalUser -Name $userName -Password (ConvertTo-SecureString $password -AsPlainText -Force)
+            $createdUser = $true
+            New-Item -ItemType Directory -Path $probeDir | Out-Null
+            & "$env:SystemRoot/System32/icacls.exe" $probeDir /grant "*$($account.SID.Value):(OI)(CI)M" | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Could not grant the test user access to the probe directory.' }
+            $state = Get-ItemProperty -LiteralPath 'HKLM:\Software\Chengjiang\PersonalIME'
+            # Installation used the runner's desktop SID. Grant this temporary account
+            # access explicitly for the input-only experiment; this is not an installer test.
+            & "$env:SystemRoot/System32/icacls.exe" $state.DataDir /grant "*$($account.SID.Value):(OI)(CI)M" /T /C | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Could not grant test data access.' }
+            Copy-Item (Join-Path $smokeBuild 'Release/personal-tsf-interactive-smoke.exe') (Join-Path $probeDir 'smoke.exe')
+            Copy-Item 'installer/tests/standard-desktop-smoke.ps1' (Join-Path $probeDir 'smoke.ps1')
+            $configPath = Join-Path $state.DataDir 'config.toml'
+            $config = [IO.File]::ReadAllText($configPath)
+            foreach ($entry in @{'candidate_translations'='true'; 'candidate_window_fit_content'='false';
+                                  'candidate_window_follow_cursor'='false'; 'cloud_candidates'='false'}.GetEnumerator()) {
+              $pattern = '(?m)^[ \t]*' + [regex]::Escape($entry.Key) + '[ \t]*=[ \t]*[^\r\n#]*'
+              if (-not [regex]::IsMatch($config, $pattern)) { throw "Missing setting: $($entry.Key)" }
+              $config = [regex]::Replace($config, $pattern, "$($entry.Key) = $($entry.Value)")
+            }
+            [IO.File]::WriteAllText($configPath, $config, [Text.UTF8Encoding]::new($false))
+            Get-Process -Name ChengjiangImeWatchdog, ChengjiangImeServer -ErrorAction SilentlyContinue | Stop-Process -Force
+            $env:CHENGJIANG_TEST_USERNAME = $userName
+            $env:CHENGJIANG_TEST_PASSWORD = $password
+            $launcher = Join-Path $build 'Release/personal-standard-desktop-launch.exe'
+            & $launcher (Get-Command pwsh).Source -NoProfile -File (Join-Path $probeDir 'smoke.ps1') `
+              -ExpectedSid $account.SID.Value -SmokeExe (Join-Path $probeDir 'smoke.exe') -ResultDir $probeDir `
+              -CertificateThumbprint $cert.Thumbprint
+            $result = $LASTEXITCODE
+            $log = Join-Path $probeDir 'standard-input.log'
+            if (Test-Path $log) { Get-Content $log | Write-Host }
+            if (Test-Path (Join-Path $probeDir 'standard-input-error.log')) { Get-Content (Join-Path $probeDir 'standard-input-error.log') | Write-Host }
+            if ($result -ne 0 -or -not (Test-Path $log) -or
+                -not ([IO.File]::ReadAllText($log).Contains('PASS: actual standard user committed Chinese text'))) {
+              throw "Standard-user input did not complete successfully ($result)."
+            }
+          } finally {
+            Remove-Item Env:CHENGJIANG_TEST_USERNAME, Env:CHENGJIANG_TEST_PASSWORD -ErrorAction SilentlyContinue
+            $password = $null
+            if ($createdUser) { Remove-LocalUser -Name $userName }
+          }
   limited-no-trust:
     name: Test ordinary preview with a restricted desktop token
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.package_run_id != '' }}
