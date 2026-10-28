@@ -10,11 +10,20 @@ on:
       - installer/tests/standard-user-task-ci.ps1
       - installer/personal_watchdog_task.iss
       - installer/interactive_user.iss
+      - 'installer/tests/uninstall-abort-*'
 
 permissions:
   contents: read
 
 jobs:
+  uninstall-abort:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Verify uninstaller can fail safely after confirmation
+        shell: pwsh
+        run: ./installer/tests/uninstall-abort-ci.ps1
   standard-user-task:
     runs-on: windows-2025
     timeout-minutes: 10

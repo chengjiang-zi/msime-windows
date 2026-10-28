@@ -17,6 +17,7 @@ var
   Locator: Variant;
   Service: Variant;
   ResultObject: Variant;
+  Index: Integer;
 begin
   Result := False;
   Sid := '';
@@ -34,6 +35,9 @@ begin
   end;
   if (Copy(Sid, 1, 4) <> 'S-1-') or (Length(Sid) > 184) then
     exit;
+  for Index := 5 to Length(Sid) do
+    if ((Sid[Index] < '0') or (Sid[Index] > '9')) and (Sid[Index] <> '-') then
+      exit;
   Result := True;
 end;
 
