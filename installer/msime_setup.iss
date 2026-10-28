@@ -683,28 +683,16 @@ end;
 
 procedure LaunchInstalledComponents;
 var
-  ErrorCode: Integer;
+  ResultCode: Integer;
 begin
-  { uiAccess=true 的程序不能用 CreateProcess 拉起（会报 740）。
-    完成页点击 Finish 后，以原用户身份执行 ShellExecute（等同双击）。}
-  ShellExecAsOriginalUser(
-    '',
-    ExpandConstant('{commonpf64}\chengjiangime\server\{#MyAppExeName}'),
-    '',
-    '',
-    SW_SHOWNORMAL,
-    ewNoWait,
-    ErrorCode
-  );
-  ShellExecAsOriginalUser(
-    '',
-    ExpandConstant('{commonpf64}\chengjiangime\server\{#MyWatchdogName}'),
-    '',
-    '',
-    SW_SHOWNORMAL,
-    ewNoWait,
-    ErrorCode
-  );
+  { The task uses the actual desktop user's interactive token even when Setup
+    was started directly as a different administrator. The watchdog starts
+    the uiAccess server and keeps it running. }
+  ResultCode := -1;
+  if not Exec(ExpandConstant('{sys}\schtasks.exe'),
+    '/Run /TN "{#MyWatchdogTaskName}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) or
+    (ResultCode <> 0) then
+    Log('Could not start the personal watchdog task; exit code: ' + IntToStr(ResultCode));
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;

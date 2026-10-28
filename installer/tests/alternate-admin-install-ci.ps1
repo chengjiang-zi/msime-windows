@@ -92,6 +92,22 @@ try {
     $watchdogSid = [Security.Principal.SecurityIdentifier]::new($watchdog.Principal.UserId)
 }
 if ($watchdogSid.Value -ne $DesktopSid) { throw 'Watchdog belongs to the wrong account.' }
+# The finish page starts this task rather than launching into the administrator's
+# session. Verify both resulting processes actually belong to the desktop user.
+Start-ScheduledTask -TaskName 'Chengjiang IME Watchdog'
+$deadline = (Get-Date).AddSeconds(40)
+do {
+    $watchdogProcess = Get-CimInstance Win32_Process -Filter "Name = 'ChengjiangImeWatchdog.exe'" |
+        Where-Object { (Invoke-CimMethod -InputObject $_ -MethodName GetOwnerSid).Sid -eq $DesktopSid } |
+        Select-Object -First 1
+    $serverProcess = Get-CimInstance Win32_Process -Filter "Name = 'ChengjiangImeServer.exe'" |
+        Where-Object { (Invoke-CimMethod -InputObject $_ -MethodName GetOwnerSid).Sid -eq $DesktopSid } |
+        Select-Object -First 1
+    if (-not $watchdogProcess -or -not $serverProcess) { Start-Sleep -Seconds 1 }
+} while ((!$watchdogProcess -or !$serverProcess) -and (Get-Date) -lt $deadline)
+if (-not $watchdogProcess -or -not $serverProcess) {
+    throw 'The watchdog did not start both processes as the desktop user.'
+}
 $personalSentinel = Join-Path $personal.DataDir 'alternate-admin-test-sentinel.txt'
 [IO.File]::WriteAllText($personalSentinel, 'personal data remains intact until uninstall')
 Assert-OriginalIntact $originalData $originalServer $originalProcess.Id $sentinel
