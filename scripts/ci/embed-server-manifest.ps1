@@ -4,7 +4,8 @@
 param(
     [string]$BuildDir = 'server/build-release/bin/Release',
     [string]$ManifestPath = 'server/MetasequoiaImeServer.manifest',
-    [string]$ManifestTool
+    [string]$ManifestTool,
+    [ValidateSet('true', 'false')][string]$ExpectedUiAccess = 'true'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -51,10 +52,10 @@ try {
         throw "Server manifest verification failed ($LASTEXITCODE)"
     }
     $embedded = Get-Content -LiteralPath $probe -Raw
-    if ($embedded -notmatch 'uiAccess\s*=\s*["'']true["'']') {
-        throw 'Embedded Server manifest does not enable uiAccess.'
+    if ($embedded -notmatch ('uiAccess\s*=\s*["'']' + $ExpectedUiAccess + '["'']')) {
+        throw "Embedded Server manifest does not have uiAccess=$ExpectedUiAccess."
     }
-    Write-Host 'Verified embedded Server manifest: uiAccess=true.'
+    Write-Host "Verified embedded Server manifest: uiAccess=$ExpectedUiAccess."
 }
 finally {
     Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue

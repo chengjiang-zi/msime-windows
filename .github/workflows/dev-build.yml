@@ -228,7 +228,7 @@ jobs:
       # the whole payload gets signed in the package job.
       - name: Embed the Server uiAccess manifest
         shell: pwsh
-        run: ./scripts/ci/embed-server-manifest.ps1 -BuildDir server/build-release/bin/Release
+        run: ./scripts/ci/embed-server-manifest.ps1 -BuildDir server/build-release/bin/Release -ExpectedUiAccess false
       # component=server uploads this directory as an installable artifact with no package job to
       # sign it. Windows ignores uiAccess=true without a trusted signature, so the binary would
       # install and then silently lose the privilege. component=all leaves it unsigned on purpose:
