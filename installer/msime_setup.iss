@@ -1847,10 +1847,29 @@ begin
       'InputMethodOverride');
 end;
 
+function UninstallPersonalLayoutOrTip(const Profile: String; Flags: Cardinal): Boolean;
+  external 'InstallLayoutOrTip@{sys}\input.dll stdcall delayload uninstallonly';
+
+{ The TSF DLL's unregister operation does not remove the current user's
+  keyboard-list entry. Ask Windows to remove only this personal profile before
+  unregistering the DLL. HKCU here is the uninstalling account; a different
+  account used for UAC needs separate handling before a general release. }
+procedure RemovePersonalKeyboardForCurrentUser;
+begin
+  try
+    if not UninstallPersonalLayoutOrTip(
+      '0804:{56A47253-A7C1-53AC-9028-7297207BD972}{1CAC6601-4479-55C1-BCA3-2B46B9AFD375}', 1) then
+      Log('Windows did not remove the personal keyboard profile for this user.');
+  except
+    Log('Could not call Windows to remove the personal keyboard profile for this user.');
+  end;
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
   begin
+    RemovePersonalKeyboardForCurrentUser;
     ClearOurInputMethodOverride;
     { 设置页「游戏兼容」记下的登记名称。升级时要留着（TSF DLL 注册时读它），卸载时不能留：
       否则日后重装会悄悄沿用别名。}
