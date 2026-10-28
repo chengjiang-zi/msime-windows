@@ -611,6 +611,7 @@ int main(int argc, char **argv) {
       if (!keepRegion && region.applied && IsWindow(region.window)) {
         SetWindowRgn(region.window, nullptr, TRUE);
         region.applied = false;
+        PumpFor(500);
       }
       SetWindowTextW(edit, L"");
       for (const WORD key : {WORD('N'), WORD('I'), WORD('H'), WORD('A'), WORD('O')}) {
@@ -634,9 +635,11 @@ int main(int argc, char **argv) {
         return 1;
       }
       const POINT candidatePoint{cardBounds.left + 60, cardBounds.top + 69};
+      PumpFor(300);
       const HWND candidateHit = WindowFromPoint(candidatePoint);
       std::cout << "CANDIDATE_CLICK_TARGET: point=" << candidatePoint.x << ',' << candidatePoint.y
-                << " is_candidate=" << (candidateHit == cardWindow) << "\n";
+                << " is_candidate=" << (candidateHit == cardWindow)
+                << " edit_has_capture=" << (GetCapture() == edit) << "\n";
       CaptureCandidate(window, window, L"candidate-click-test-window");
       INPUT click[2]{};
       click[0].type = INPUT_MOUSE;
