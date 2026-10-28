@@ -18,6 +18,12 @@
 ; 上面两条都不把 PDB 打进包；要带符号用 .\test-symbols.ps1。
 ; 本仓库不包含任何预置代码签名证书。
 
+; This branch is being converted to a side-by-side personal edition. Until all
+; installer paths, TSF identities, process names and uninstall actions are
+; isolated, producing an installer could overwrite or remove the upstream IME.
+; Remove this guard only after the side-by-side regression checks pass.
+#error "Personal edition isolation is incomplete; do not build or install this package."
+
 #define MyAppName      "Metasequoia IME 水杉输入法"
 #define MyAppVersion   "0.0.1"
 ; VersionInfoVersion 是 PE 的 VERSIONINFO，只接受数字和点号；dev 构建的 MyAppVersion 带

@@ -26,6 +26,20 @@
 
 int main()
 {
+    // Personal edition IPC endpoints must not collide with the upstream IME.
+    CHECK(std::wstring(FANY_IME_SHARED_MEMORY) == L"Local\\ChengjiangImeSharedMemory");
+    CHECK(std::wstring(FANY_IME_NAMED_PIPE) == L"\\\\.\\pipe\\ChengjiangImeNamedPipe");
+    CHECK(std::wstring(FANY_IME_TO_TSF_NAMED_PIPE) == L"\\\\.\\pipe\\ChengjiangImeToTsfNamedPipe");
+    CHECK(std::wstring(FANY_IME_TO_TSF_WORKER_THREAD_NAMED_PIPE) ==
+          L"\\\\.\\pipe\\ChengjiangImeToTsfWorkerThreadNamedPipe");
+    CHECK(std::wstring(FANY_IME_AUX_NAMED_PIPE) == L"\\\\.\\pipe\\ChengjiangImeAuxNamedPipe");
+    CHECK(std::wstring(FANY_IME_TSF_DIAGNOSTIC_NAMED_PIPE) == L"\\\\.\\pipe\\ChengjiangImeTsfDiagnosticNamedPipe");
+    CHECK(std::wstring(FANY_IME_VOICE_CONTROL_NAMED_PIPE) == L"\\\\.\\pipe\\ChengjiangImeVoiceControlNamedPipe");
+    CHECK(std::wstring(FANY_IME_STATS_PIPE_NAME_PREFIX) == L"\\\\.\\pipe\\ChengjiangImeStatsNamedPipe-");
+    CHECK(FANY_IME_EVENT_ARRAY.size() == 4);
+    for (const auto &event : FANY_IME_EVENT_ARRAY)
+        CHECK(event.find(L"Chengjiang") == 0);
+
     // Wire bytes, not just matching C++ declarations: existing v1 DLLs write
     // these offsets on both x86 and x64. Changes must not move UTF-16 data.
     std::array<unsigned char, 304> bytes{};
