@@ -35,6 +35,7 @@ $scenarios = @(
 )
 if ($ProbeMouseCaret) {
     $scenarios += @{ Name = 'mouse-caret'; Layout = 'vertical'; PageSize = 6 }
+    $scenarios += @{ Name = 'mouse-caret-richedit'; Layout = 'vertical'; PageSize = 6 }
 }
 foreach ($scenario in $scenarios) {
     $layout = $scenario.Layout
@@ -72,7 +73,8 @@ foreach ($scenario in $scenarios) {
     # Keep this an array even for one argument: splatting a bare string passes
     # its characters separately instead of the complete switch.
     $arguments = @(if ($layout -eq 'horizontal') { "--horizontal-navigation=$pageSize" }
-        elseif ($scenario.Name -eq 'mouse-caret') { '--mouse-caret-diagnostic' })
+        elseif ($scenario.Name -eq 'mouse-caret') { '--mouse-caret-diagnostic' }
+        elseif ($scenario.Name -eq 'mouse-caret-richedit') { '--mouse-caret-richedit' })
     & (Join-Path $build 'Release/personal-tsf-interactive-smoke.exe') @arguments |
         Tee-Object -Variable smokeLines | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -eq 77) {
@@ -82,7 +84,7 @@ foreach ($scenario in $scenarios) {
     } elseif ($layout -eq 'horizontal' -and
               -not (($smokeLines -join "`n").Contains("PASS: $pageSize right keys"))) {
         throw 'The horizontal navigation scenario did not run.'
-    } elseif ($scenario.Name -eq 'mouse-caret' -and
+    } elseif ($scenario.Name -like 'mouse-caret*' -and
               -not (($smokeLines -join "`n").Contains('MOUSE_CARET:'))) {
         throw 'The mouse caret diagnostic did not run.'
     }

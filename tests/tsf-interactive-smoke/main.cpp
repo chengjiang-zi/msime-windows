@@ -1,8 +1,10 @@
 #include <Windows.h>
 #include <msctf.h>
+#include <richedit.h>
 #include <windowsx.h>
 
 #include <chrono>
+#include <cwchar>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -119,11 +121,13 @@ int main(int argc, char **argv) {
   if (argc > 2 || (argc == 2 && argument != "--horizontal-navigation=3" &&
                    argument != "--horizontal-navigation=6" &&
                    argument != "--horizontal-navigation=9" &&
-                   argument != "--mouse-caret-diagnostic")) {
+                   argument != "--mouse-caret-diagnostic" &&
+                   argument != "--mouse-caret-richedit")) {
     std::cerr << "Unexpected interactive smoke-test arguments.\n";
     return 1;
   }
-  const bool testMouseCaret = argument == "--mouse-caret-diagnostic";
+  const bool richEdit = argument == "--mouse-caret-richedit";
+  const bool testMouseCaret = argument == "--mouse-caret-diagnostic" || richEdit;
   const bool testHorizontalNavigation = argc == 2 && !testMouseCaret;
   const int pageSize = testHorizontalNavigation ? argument.back() - '0' : 0;
   if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))
@@ -132,7 +136,13 @@ int main(int argc, char **argv) {
                                 WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT,
                                 CW_USEDEFAULT, 640, 300, nullptr, nullptr,
                                 GetModuleHandleW(nullptr), nullptr);
-  HWND edit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
+  if (richEdit && !LoadLibraryW(L"Msftedit.dll")) {
+    std::cerr << "Could not load the disposable Rich Edit control.\n";
+    DestroyWindow(window);
+    CoUninitialize();
+    return 1;
+  }
+  HWND edit = CreateWindowExW(WS_EX_CLIENTEDGE, richEdit ? MSFTEDIT_CLASS : L"EDIT", L"",
                               WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_MULTILINE,
                               10, 10, 600, 220, window, nullptr,
                               GetModuleHandleW(nullptr), nullptr);
@@ -354,12 +364,31 @@ int main(int argc, char **argv) {
     PumpFor(1000);
     wchar_t preedit[256]{};
     GetWindowTextW(edit, preedit, static_cast<int>(sizeof(preedit) / sizeof(preedit[0])));
-    const LRESULT first = SendMessageW(edit, EM_POSFROMCHAR, 0, 0);
-    const LRESULT second = SendMessageW(edit, EM_POSFROMCHAR, 1, 0);
-    if (!*preedit || first == -1 || second == -1) {
-      std::cout << "MOUSE_CARET: inconclusive; inline preedit positions unavailable.\n";
+    POINT firstPoint{};
+    POINT secondPoint{};
+    LRESULT first = -1;
+    LRESULT second = -1;
+    if (richEdit) {
+      POINTL position0{};
+      POINTL position1{};
+      first = SendMessageW(edit, EM_POSFROMCHAR, reinterpret_cast<WPARAM>(&position0), 0);
+      second = SendMessageW(edit, EM_POSFROMCHAR, reinterpret_cast<WPARAM>(&position1), 1);
+      firstPoint = {position0.x, position0.y};
+      secondPoint = {position1.x, position1.y};
     } else {
-      POINT point{GET_X_LPARAM(second) + 1, GET_Y_LPARAM(first) + 6};
+      first = SendMessageW(edit, EM_POSFROMCHAR, 0, 0);
+      second = SendMessageW(edit, EM_POSFROMCHAR, 1, 0);
+      firstPoint = {GET_X_LPARAM(first), GET_Y_LPARAM(first)};
+      secondPoint = {GET_X_LPARAM(second), GET_Y_LPARAM(second)};
+    }
+    if (!CaptureCandidate(window, window, L"mouse-caret-test-window"))
+      std::cerr << "Could not capture the disposable mouse test window.\n";
+    if (!*preedit || first == -1 || second == -1) {
+      std::cout << "MOUSE_CARET: inconclusive; inline preedit positions unavailable"
+                << " (length=" << std::wcslen(preedit) << ", first=" << first
+                << ", second=" << second << ").\n";
+    } else {
+      POINT point{secondPoint.x + 1, firstPoint.y + 6};
       ClientToScreen(edit, &point);
       if (!SetCursorPos(point.x, point.y)) {
         std::cout << "MOUSE_CARET: inconclusive; could not move test pointer.\n";
