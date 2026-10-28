@@ -1,0 +1,36 @@
+name: Upstream installer diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/personal-edition-isolation
+    paths:
+      - .github/workflows/upstream-install-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - name: Inspect upstream data directory in a disposable VM
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'upstream-diagnostic'
+          New-Item -ItemType Directory -Path $root | Out-Null
+          $exe = Join-Path $root 'setup.exe'
+          $data = Join-Path $root 'data'
+          $log = Join-Path $root 'setup.log'
+          Invoke-WebRequest -Uri 'https://github.com/metasequoiaime/msime-windows/releases/download/v0.12.0/MetasequoiaIME_Setup_v0.12.0.exe' -OutFile $exe
+          if ((Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant() -ne '2baf40185ab95b109f2fd42087a1bf90ae1bb0e8298311d17031c4fccc2bb933') { throw 'Upstream installer hash mismatch.' }
+          if ((Get-AuthenticodeSignature $exe).Status -ne 'Valid') { throw 'Upstream signature invalid.' }
+          $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DATADIR=`"$data`"", "/LOG=`"$log`"")
+          $process = Start-Process -FilePath $exe -ArgumentList $arguments -Wait -PassThru
+          $state = Get-ItemProperty -LiteralPath 'HKLM:\Software\Metasequoia\MetasequoiaIME' -ErrorAction SilentlyContinue
+          Write-Host "Exit: $($process.ExitCode); requested: $data; registered: $($state.DataDir)"
+          if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log | Write-Host }
+          if ($process.ExitCode -ne 0) { throw 'Upstream installation failed.' }
