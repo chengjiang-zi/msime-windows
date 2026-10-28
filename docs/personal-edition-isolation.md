@@ -19,8 +19,9 @@
 - [真实输入框与候选框自动测试](https://github.com/chengjiang-zi/msime-windows/actions/runs/40723101367)已验证个人版上屏中文，以及一组开启译文、固定位置的退格场景；其他宿主、多显示器、不同缩放和人工视觉体验仍未验证。
 - [账户处理接入后的回归](https://github.com/chengjiang-zi/msime-windows/actions/runs/40731688079)已验证桌面用户识别与失败时保守退出的独立探针、为标准账户创建无密码交互式任务的独立探针，以及同账户的完整安装、升级、卸载和输入。
 - 安装和卸载时，个人版通过绑定桌面用户的临时任务登记或清理该用户的键盘条目。[不同管理员身份下的安装和卸载测试](https://github.com/chengjiang-zi/msime-windows/actions/runs/40740483770)已验证数据目录、键盘条目和后台进程属于桌面用户，清理任务不可用时卸载停止且官方版未受影响；该测试没有操作真实的 UAC 凭据对话框。
-- 安装完成页改为启动绑定桌面用户的看门狗任务；安装后步骤失败时不自动启动，并为静默调用返回非零状态。失败提示的新修改仍需要回归测试。
-- 新安装的数据目录改为向桌面用户 SID 授予修改权限，不再主动向整个本机 Users 组授权；不会撤销目录原本继承的权限。[独立诊断](https://github.com/chengjiang-zi/msime-windows/actions/runs/40742832969)已验证普通账户可以修改由管理员创建的数据文件；完整安装回归仍在进行。
+- 安装完成页改为启动绑定桌面用户的看门狗任务；安装后步骤失败时不自动启动，并为静默调用返回非零状态。[独立探针](https://github.com/chengjiang-zi/msime-windows/actions/runs/40744637109)已验证安装后异常返回失败码；[完整安装回归](https://github.com/chengjiang-zi/msime-windows/actions/runs/40742833035)已通过。
+- 新安装的数据目录改为向桌面用户 SID 授予修改权限，不再主动向整个本机 Users 组授权；不会撤销目录原本继承的权限。[独立诊断](https://github.com/chengjiang-zi/msime-windows/actions/runs/40742832969)已验证普通账户可以修改由管理员创建的数据文件，并已通过完整安装回归。
+- [服务端回归](https://github.com/chengjiang-zi/msime-windows/actions/runs/40742833035)首次运行时主测试套件在 120 秒超时，重跑后约 51 秒通过；首次超时的具体原因尚未定位。
 
 ## 必须完成的隔离
 
