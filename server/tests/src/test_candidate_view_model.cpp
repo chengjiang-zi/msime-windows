@@ -1,6 +1,39 @@
 #include "window/candidate_view_model.h"
 #include "window/candidate_stable_extent.h"
+#include "window/candidate_fixed_position.h"
 #include "tests/includes/test_framework.h"
+
+TEST_CASE(candidate_fixed_position_keeps_the_card_in_the_selected_work_area)
+{
+    const CandidateFixedRect primary{0, 0, 1920, 1040};
+    const auto unchanged = ClampCandidateFixedPoint({400, 300}, 500, 200, primary);
+    REQUIRE_EQ(unchanged.x, 400);
+    REQUIRE_EQ(unchanged.y, 300);
+    const auto nearEdge = ClampCandidateFixedPoint({1900, 1030}, 500, 200, primary);
+    REQUIRE_EQ(nearEdge.x, 1420);
+    REQUIRE_EQ(nearEdge.y, 840);
+    const CandidateFixedRect leftMonitor{-1600, -200, 0, 700};
+    const auto movedMonitor = ClampCandidateFixedPoint({200, -300}, 400, 200, leftMonitor);
+    REQUIRE_EQ(movedMonitor.x, -400);
+    REQUIRE_EQ(movedMonitor.y, -200);
+    const auto oversized = ClampCandidateFixedPoint({-100, 500}, 3000, 2000, leftMonitor);
+    REQUIRE_EQ(oversized.x, -1600);
+    REQUIRE_EQ(oversized.y, -200);
+}
+
+TEST_CASE(candidate_fixed_position_parses_only_complete_valid_coordinates)
+{
+    CandidateFixedPoint point{7, 9};
+    REQUIRE(ParseCandidateFixedPoint("-123,456", point));
+    REQUIRE_EQ(point.x, -123);
+    REQUIRE_EQ(point.y, 456);
+    REQUIRE(!ParseCandidateFixedPoint("", point));
+    REQUIRE(!ParseCandidateFixedPoint("1,2,3", point));
+    REQUIRE(!ParseCandidateFixedPoint("1,2x", point));
+    REQUIRE(!ParseCandidateFixedPoint("2147483648,0", point));
+    REQUIRE_EQ(point.x, -123);
+    REQUIRE_EQ(point.y, 456);
+}
 
 TEST_CASE(candidate_stable_extent_keeps_size_until_reset_and_obeys_monitor_limits)
 {

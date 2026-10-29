@@ -1,6 +1,7 @@
 // 候选窗外观配置：每页候选数、字体与字号、文字颜色、布局与跟随光标、
 // 皮肤、预编辑样式、固定徽标和设置窗口保留时长。
 #include "config/ime_config_internal.h"
+#include "window/candidate_fixed_position.h"
 #include <algorithm>
 #include <cctype>
 #include <string>
@@ -203,6 +204,35 @@ bool SetConfiguredCandidateWindowFollowCursor(bool enabled)
         return false;
     }
     g_candidate_window_follow_cursor = enabled;
+    return true;
+}
+
+bool GetConfiguredCandidateWindowScreenPinned()
+{
+    return g_candidate_window_screen_pinned;
+}
+
+bool SetConfiguredCandidateWindowScreenPinned(bool enabled)
+{
+    if (!WriteConfiguredValue("appearance", "candidate_window_screen_pinned", enabled ? "true" : "false"))
+        return false;
+    g_candidate_window_screen_pinned = enabled;
+    return true;
+}
+
+const std::string &GetConfiguredCandidateWindowScreenPosition()
+{
+    return g_candidate_window_screen_position;
+}
+
+bool SetConfiguredCandidateWindowScreenPosition(const std::string &position)
+{
+    CandidateFixedPoint point{};
+    if (!position.empty() && !ParseCandidateFixedPoint(position, point))
+        return false;
+    if (!WriteConfiguredValue("appearance", "candidate_window_screen_position", EscapeTomlBasicString(position)))
+        return false;
+    g_candidate_window_screen_position = position;
     return true;
 }
 

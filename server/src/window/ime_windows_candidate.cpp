@@ -6,6 +6,7 @@
 #include "ipc/ipc.h"
 #include "ime_windows.h"
 #include "window/candidate_presenter.h"
+#include "window/candidate_fixed_position.h"
 #include "window/floating_toolbar_presenter.h"
 #include "window/caret_fallback.h"
 #include "defines/defines.h"
@@ -15,6 +16,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <memory>
+#include <limits>
 #include <string>
 #include <fmt/xchar.h>
 #include "utils/window_utils.h"
@@ -32,6 +34,11 @@ std::atomic<bool> g_candidate_force_layout{false};
 // A WM_HIDE_MAIN_WINDOW is armed on TIMER_ID_CANDIDATE_HIDE_GRACE rather than
 // applied straight away; a show inside the grace window cancels it.
 bool g_candidate_hide_pending = false;
+bool g_screen_user_pin_applied = false;
+bool g_screen_dragging = false;
+POINT g_screen_drag_start{};
+POINT g_screen_drag_card_start{};
+POINT g_screen_drag_origin{};
 // Last frame actually painted, used to drop duplicate shows. Cleared on hide so
 // the next session always paints.
 std::wstring g_last_rendered_candidate_signature;
@@ -188,13 +195,51 @@ bool CandidateCaretNeedsStableFollow(HWND hwnd, POINT caret)
 }
 } // namespace ime_windows_detail
 
+namespace
+{
+void PresentCandidateWithScreenPin(POINT caret)
+{
+    auto &presenter = CandidatePresenter::Instance();
+    CandidateFixedPoint configured{};
+    const bool enabled = GetConfiguredCandidateWindowScreenPinned();
+    const bool hasPosition = enabled && ParseCandidateFixedPoint(GetConfiguredCandidateWindowScreenPosition(), configured);
+    if (g_screen_dragging)
+    {
+        presenter.SetPinnedCardOrigin(&g_screen_drag_origin);
+        g_screen_user_pin_applied = true;
+    }
+    else if (hasPosition)
+    {
+        const POINT position{configured.x, configured.y};
+        presenter.SetPinnedCardOrigin(&position);
+        g_screen_user_pin_applied = true;
+    }
+    else if (g_screen_user_pin_applied)
+    {
+        presenter.SetPinnedCardOrigin(nullptr);
+        g_screen_user_pin_applied = false;
+    }
+    presenter.ShowFromGlobalState(caret);
+    if (enabled && !hasPosition && !g_screen_dragging && caret.y != Global::INVALID_Y)
+    {
+        POINT actual{};
+        if (presenter.GetCardScreenOrigin(actual) &&
+            SetConfiguredCandidateWindowScreenPosition(std::to_string(actual.x) + "," + std::to_string(actual.y)))
+        {
+            presenter.SetPinnedCardOrigin(&actual);
+            g_screen_user_pin_applied = true;
+        }
+    }
+}
+} // namespace
+
 // Re-lays out the candidate window at the current caret anchor.
 int FineTuneWindow(HWND /*hwnd*/)
 {
     const POINT layoutCaret = GetCandidateLayoutCaret();
     if (CandidatePresenter::Instance().IsBound())
     {
-        CandidatePresenter::Instance().ShowFromGlobalState(layoutCaret);
+        PresentCandidateWithScreenPin(layoutCaret);
         NotePlacedCandidateCaret(layoutCaret);
     }
     return 0;
@@ -217,7 +262,7 @@ LRESULT CALLBACK WndProcCandWindow(HWND hwnd, UINT message, WPARAM wParam, LPARA
         // ApplySkin fingerprint.
         if (::is_global_wnd_cand_shown && CandidatePresenter::Instance().IsBound())
         {
-            CandidatePresenter::Instance().ShowFromGlobalState(GetCandidateLayoutCaret());
+            PresentCandidateWithScreenPin(GetCandidateLayoutCaret());
         }
     }
 
@@ -312,7 +357,7 @@ LRESULT CALLBACK WndProcCandWindow(HWND hwnd, UINT message, WPARAM wParam, LPARA
         g_last_rendered_candidate_tick = updateStartedTick;
         if (CandidatePresenter::Instance().IsBound())
         {
-            CandidatePresenter::Instance().ShowFromGlobalState(layoutCaret);
+            PresentCandidateWithScreenPin(layoutCaret);
             NotePlacedCandidateCaret(layoutCaret);
             CAND_DIAG_LOGF(L"candidate-frame path=d2d elapsed_ms={}", GetTickCount64() - updateStartedTick);
         }
@@ -339,6 +384,12 @@ LRESULT CALLBACK WndProcCandWindow(HWND hwnd, UINT message, WPARAM wParam, LPARA
             return 0;
         }
         KillTimer(hwnd, TIMER_ID_CANDIDATE_HIDE_GRACE);
+        if (g_screen_dragging)
+        {
+            g_screen_dragging = false;
+            if (GetCapture() == hwnd)
+                ReleaseCapture();
+        }
         g_candidate_hide_pending = false;
         CAND_DIAG_LOGF(L"hide message begin {}", DescribeCandidateHostState());
         ::is_global_wnd_cand_shown = false;
@@ -486,7 +537,7 @@ LRESULT CALLBACK WndProcCandWindow(HWND hwnd, UINT message, WPARAM wParam, LPARA
             ForceReloadConfiguredCandidateSkin();
             if (::is_global_wnd_cand_shown && CandidatePresenter::Instance().IsBound())
             {
-                CandidatePresenter::Instance().ShowFromGlobalState(GetCandidateLayoutCaret());
+                PresentCandidateWithScreenPin(GetCandidateLayoutCaret());
             }
             return 0;
         }
@@ -531,6 +582,53 @@ LRESULT CALLBACK WndProcCandWindow(HWND hwnd, UINT message, WPARAM wParam, LPARA
         UnpinCaretFallback();
         g_caret_fallback_valid = true;
         g_caret_fallback_anchor = result.anchor;
+        FineTuneWindow(hwnd);
+        return 0;
+    }
+
+    if (message == WM_LBUTTONDOWN && GetConfiguredCandidateWindowScreenPinned() &&
+        (GetAsyncKeyState(VK_MENU) & 0x8000) && ::is_global_wnd_cand_shown &&
+        CandidatePresenter::Instance().GetCardScreenOrigin(g_screen_drag_card_start) && GetCursorPos(&g_screen_drag_start))
+    {
+        SetCapture(hwnd);
+        if (GetCapture() == hwnd)
+        {
+            g_screen_drag_origin = g_screen_drag_card_start;
+            g_screen_dragging = true;
+            return 0;
+        }
+    }
+    if (g_screen_dragging && message == WM_MOUSEMOVE)
+    {
+        POINT cursor{};
+        if (GetCursorPos(&cursor))
+        {
+            const auto coordinate = [](long start, long current, long initial) {
+                const auto value = static_cast<long long>(start) + current - initial;
+                return static_cast<long>((std::clamp)(value, static_cast<long long>((std::numeric_limits<long>::min)()),
+                                                       static_cast<long long>((std::numeric_limits<long>::max)())));
+            };
+            g_screen_drag_origin = {coordinate(g_screen_drag_card_start.x, cursor.x, g_screen_drag_start.x),
+                                    coordinate(g_screen_drag_card_start.y, cursor.y, g_screen_drag_start.y)};
+            FineTuneWindow(hwnd);
+        }
+        return 0;
+    }
+    if (g_screen_dragging && message == WM_LBUTTONUP)
+    {
+        POINT actual{};
+        const bool haveOrigin = CandidatePresenter::Instance().GetCardScreenOrigin(actual);
+        g_screen_dragging = false;
+        if (GetCapture() == hwnd)
+            ReleaseCapture();
+        if (haveOrigin)
+            SetConfiguredCandidateWindowScreenPosition(std::to_string(actual.x) + "," + std::to_string(actual.y));
+        FineTuneWindow(hwnd);
+        return 0;
+    }
+    if (g_screen_dragging && message == WM_CAPTURECHANGED)
+    {
+        g_screen_dragging = false;
         FineTuneWindow(hwnd);
         return 0;
     }
@@ -688,7 +786,7 @@ LRESULT CALLBACK WndProcCandWindow(HWND hwnd, UINT message, WPARAM wParam, LPARA
                 {
                     if (CandidatePresenter::Instance().IsBound())
                     {
-                        CandidatePresenter::Instance().ShowFromGlobalState(GetCandidateLayoutCaret());
+                        PresentCandidateWithScreenPin(GetCandidateLayoutCaret());
                     }
                 }
                 if (previous_floating_toolbar != GetConfiguredFloatingToolbarEnabled())

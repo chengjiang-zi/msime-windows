@@ -505,6 +505,8 @@ std::wstring BuildConfigMessage(bool refresh_skin_catalog)
             {"auto_download_update", GetConfiguredAutoDownloadUpdate()},
             {"candidate_window_layout", GetConfiguredCandidateWindowLayout()},
             {"candidate_window_follow_cursor", GetConfiguredCandidateWindowFollowCursor()},
+            {"candidate_window_screen_pinned", GetConfiguredCandidateWindowScreenPinned()},
+            {"candidate_window_screen_position", GetConfiguredCandidateWindowScreenPosition()},
             {"candidate_window_fit_content", GetConfiguredCandidateWindowFitContent()},
             {"candidate_window_single_line", GetConfiguredCandidateWindowSingleLine()},
             {"candidate_skin", GetConfiguredCandidateSkin()},
@@ -760,6 +762,10 @@ bool ApplyConfigUpdate(const json::object &data)
         return SetConfiguredCandidateWindowLayout(json::value_to<std::string>(data.at("value")));
     if (path == "appearance.candidate_window_follow_cursor")
         return SetConfiguredCandidateWindowFollowCursor(json::value_to<bool>(data.at("value")));
+    if (path == "appearance.candidate_window_screen_pinned")
+        return SetConfiguredCandidateWindowScreenPinned(json::value_to<bool>(data.at("value")));
+    if (path == "appearance.candidate_window_screen_position")
+        return SetConfiguredCandidateWindowScreenPosition(json::value_to<std::string>(data.at("value")));
     if (path == "appearance.candidate_window_fit_content")
         return SetConfiguredCandidateWindowFitContent(json::value_to<bool>(data.at("value")));
     if (path == "appearance.candidate_window_single_line")

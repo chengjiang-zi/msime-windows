@@ -32,6 +32,7 @@ $scenarios = @(
     @{ Name = 'horizontal-3'; Layout = 'horizontal'; PageSize = 3 }
     @{ Name = 'horizontal-6'; Layout = 'horizontal'; PageSize = 6 }
     @{ Name = 'horizontal-9'; Layout = 'horizontal'; PageSize = 9 }
+    @{ Name = 'fixed-position'; Layout = 'vertical'; PageSize = 6 }
 )
 if ($ProbeMouseCaret) {
     $scenarios += @{ Name = 'mouse-caret'; Layout = 'vertical'; PageSize = 6 }
@@ -46,6 +47,8 @@ foreach ($scenario in $scenarios) {
         'candidate_window_layout' = '"' + $layout + '"'
         'candidate_window_fit_content' = 'false'
         'candidate_window_follow_cursor' = 'false'
+        'candidate_window_screen_pinned' = $(if ($scenario.Name -eq 'fixed-position') { 'true' } else { 'false' })
+        'candidate_window_screen_position' = '""'
         'candidate_horizontal_arrow_navigation' = 'true'
         'paging_page_up_down' = 'true'
         'page_size' = [string]$pageSize
@@ -73,6 +76,7 @@ foreach ($scenario in $scenarios) {
     # Keep this an array even for one argument: splatting a bare string passes
     # its characters separately instead of the complete switch.
     $arguments = @(if ($layout -eq 'horizontal') { "--horizontal-navigation=$pageSize" }
+        elseif ($scenario.Name -eq 'fixed-position') { '--fixed-position' }
         elseif ($scenario.Name -eq 'mouse-caret') { '--mouse-caret-diagnostic' }
         elseif ($scenario.Name -eq 'mouse-caret-richedit') { '--mouse-caret-richedit' })
     & (Join-Path $build 'Release/personal-tsf-interactive-smoke.exe') @arguments |
@@ -84,6 +88,12 @@ foreach ($scenario in $scenarios) {
     } elseif ($layout -eq 'horizontal' -and
               -not (($smokeLines -join "`n").Contains("PASS: $pageSize right keys"))) {
         throw 'The horizontal navigation scenario did not run.'
+    } elseif ($scenario.Name -eq 'fixed-position' -and
+              -not (($smokeLines -join "`n").Contains('PASS: Alt-dragged candidate position persists across compositions.'))) {
+        throw 'The fixed-position scenario did not run.'
+    } elseif ($scenario.Name -eq 'fixed-position' -and
+              -not ([IO.File]::ReadAllText($configPath) -match '(?m)^candidate_window_screen_position\s*=\s*"-?\d+,-?\d+"')) {
+        throw 'The dragged candidate position was not saved.'
     } elseif ($scenario.Name -like 'mouse-caret*' -and
               -not (($smokeLines -join "`n").Contains('MOUSE_CARET:'))) {
         throw 'The mouse caret diagnostic did not run.'

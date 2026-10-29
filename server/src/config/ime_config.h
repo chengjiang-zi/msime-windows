@@ -676,6 +676,10 @@ const std::string &GetConfiguredCandidateWindowLayout();
 bool SetConfiguredCandidateWindowLayout(const std::string &layout);
 bool GetConfiguredCandidateWindowFollowCursor();
 bool SetConfiguredCandidateWindowFollowCursor(bool enabled);
+bool GetConfiguredCandidateWindowScreenPinned();
+bool SetConfiguredCandidateWindowScreenPinned(bool enabled);
+const std::string &GetConfiguredCandidateWindowScreenPosition();
+bool SetConfiguredCandidateWindowScreenPosition(const std::string &position);
 // 候选框严格按文字宽度收紧；与皮肤 skin.toml 的 fit_content 取或，任一打开即生效。
 bool GetConfiguredCandidateWindowFitContent();
 bool SetConfiguredCandidateWindowFitContent(bool enabled);

@@ -19,6 +19,7 @@
 #include "window/candidate_skin_scene.h"
 #include "window/candidate_skin_tokens.h"
 #include "window/candidate_stable_extent.h"
+#include "window/candidate_fixed_position.h"
 #include "window/candidate_wheel_paging.h"
 #include "window/ime_windows.h"
 
@@ -825,6 +826,7 @@ void CandidatePresenter::PlaceAndShow(POINT caret, float widthDip, float heightD
     lastHostHeightPx_ = heightPx;
     const int cardLeftPx = static_cast<int>(std::lround(cardLeftDip * scale));
     const int cardTopPx = static_cast<int>(std::lround(cardTopDip * scale));
+    lastCardOffsetPx_ = {cardLeftPx, cardTopPx};
     const int cardHeightPx = static_cast<int>(std::lround(cardHeightDip * scale));
     int x = properPos->first - cardLeftPx;
     int y = properPos->second - cardTopPx;
@@ -857,8 +859,11 @@ void CandidatePresenter::PlaceAndShow(POINT caret, float widthDip, float heightD
     }
     if (cardOriginPinned_)
     {
-        x = pinnedCardOrigin_.x - cardLeftPx;
-        y = pinnedCardOrigin_.y - cardTopPx;
+        const auto fixed = ClampCandidateFixedPoint({pinnedCardOrigin_.x, pinnedCardOrigin_.y}, cardWidthPx,
+                                                     cardHeightPx,
+                                                     {monitor.left, monitor.top, monitor.right, monitor.bottom});
+        x = fixed.x - cardLeftPx;
+        y = fixed.y - cardTopPx;
     }
     // Rendering must use the same scale the window is sized with: the ui
     // override replaces GetDpiForWindow (144 inside RDP) so DIPs map exactly
@@ -926,6 +931,12 @@ void CandidatePresenter::ShowFromGlobalState(POINT caret)
     if (!bound_ || !hwnd_ || !impl_ || !impl_->root)
     {
         return;
+    }
+    if (cardOriginPinned_)
+    {
+        // Resolve monitor and DPI from the fixed position, not the focused
+        // application's caret, which may be on another screen.
+        caret = pinnedCardOrigin_;
     }
     // A composition can start before the host reports a usable text extent
     // (first focus, or resuming after a long idle). The caret then arrives as
@@ -1094,6 +1105,15 @@ void CandidatePresenter::SetPinnedCardOrigin(const POINT *origin)
 {
     cardOriginPinned_ = origin != nullptr;
     pinnedCardOrigin_ = origin ? *origin : POINT{};
+}
+
+bool CandidatePresenter::GetCardScreenOrigin(POINT &origin) const
+{
+    RECT bounds{};
+    if (!hwnd_ || !bound_ || !GetWindowRect(hwnd_, &bounds))
+        return false;
+    origin = {bounds.left + lastCardOffsetPx_.x, bounds.top + lastCardOffsetPx_.y};
+    return true;
 }
 
 void CandidatePresenter::Hide()

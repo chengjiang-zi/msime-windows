@@ -540,6 +540,11 @@ VisualPtr BuildAppearancePage(PageContext &context)
                false);
         addRow(MakeRow(L"候选窗口跟随光标", L"关闭后保持首次位置，直到候选窗口消失",
                        BindToggle(context, "appearance.candidate_window_follow_cursor")));
+        addRow(MakeRow(L"跨次输入固定候选窗口", L"开启后按住 Alt 拖动候选框；固定位置优先于跟随光标",
+                       BindToggle(context, "appearance.candidate_window_screen_pinned")));
+        auto resetPosition = std::make_shared<Button>(L"重新定位", ButtonKind::Soft);
+        resetPosition->SetOnClick([model]() { model->Update("appearance.candidate_window_screen_position", ""); });
+        addRow(MakeRow(L"重置候选窗口位置", L"下次输入时先显示在光标附近，再拖动到想要的位置", resetPosition));
         addRow(MakeRow(L"固定候选徽标", L"为手动固定的候选词显示角标，便于辨认",
                        BindToggle(context, "appearance.candidate_fixed_badge")));
         addRow(MakeRow(L"固定候选徽标样式", L"",

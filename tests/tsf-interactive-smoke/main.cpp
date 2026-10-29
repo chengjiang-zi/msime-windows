@@ -121,14 +121,16 @@ int main(int argc, char **argv) {
   if (argc > 2 || (argc == 2 && argument != "--horizontal-navigation=3" &&
                    argument != "--horizontal-navigation=6" &&
                    argument != "--horizontal-navigation=9" &&
+                   argument != "--fixed-position" &&
                    argument != "--mouse-caret-diagnostic" &&
                    argument != "--mouse-caret-richedit")) {
     std::cerr << "Unexpected interactive smoke-test arguments.\n";
     return 1;
   }
   const bool richEdit = argument == "--mouse-caret-richedit";
+  const bool testFixedPosition = argument == "--fixed-position";
   const bool testMouseCaret = argument == "--mouse-caret-diagnostic" || richEdit;
-  const bool testHorizontalNavigation = argc == 2 && !testMouseCaret;
+  const bool testHorizontalNavigation = argc == 2 && !testMouseCaret && !testFixedPosition;
   const int pageSize = testHorizontalNavigation ? argument.back() - '0' : 0;
   if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))
     return 1;
@@ -254,6 +256,41 @@ int main(int argc, char **argv) {
     CoUninitialize();
     return 1;
   }
+  RECT dragged{};
+  if (testFixedPosition) {
+    const POINT start{after.left + 60, after.top + 70};
+    const POINT end{start.x + 100, start.y + 60};
+    if (WindowFromPoint(start) != candidate || !SetCursorPos(start.x, start.y)) {
+      std::cerr << "Could not target the candidate card for the drag.\n";
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    INPUT down[2]{};
+    down[0].type = INPUT_KEYBOARD;
+    down[0].ki.wVk = VK_MENU;
+    down[1].type = INPUT_MOUSE;
+    down[1].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+    INPUT up[2]{};
+    up[0].type = INPUT_MOUSE;
+    up[0].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+    up[1].type = INPUT_KEYBOARD;
+    up[1].ki.wVk = VK_MENU;
+    up[1].ki.dwFlags = KEYEVENTF_KEYUP;
+    const bool pressed = SendInput(2, down, sizeof(INPUT)) == 2;
+    PumpFor(300);
+    const bool moved = SetCursorPos(end.x, end.y) != FALSE;
+    PumpFor(500);
+    const bool released = SendInput(2, up, sizeof(INPUT)) == 2;
+    PumpFor(800);
+    if (!pressed || !moved || !released || !GetWindowRect(candidate, &dragged) ||
+        dragged.left - after.left != 100 || dragged.top - after.top != 60) {
+      std::cerr << "Alt-drag did not move the candidate to the requested position.\n";
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+  }
   for (const WORD key : {WORD('O'), WORD(VK_SPACE)}) {
     if (!SendKey(key)) {
       std::cerr << "Could not finish the test composition.\n";
@@ -275,6 +312,24 @@ int main(int argc, char **argv) {
     DestroyWindow(window);
     CoUninitialize();
     return 1;
+  }
+  if (testFixedPosition) {
+    for (const WORD key : {WORD('N'), WORD('I'), WORD('H'), WORD('A'), WORD('O')}) {
+      if (!SendKey(key)) return 1;
+      PumpFor(250);
+    }
+    PumpFor(1500);
+    RECT next{};
+    if (!IsWindowVisible(candidate) || !GetWindowRect(candidate, &next) ||
+        next.left != dragged.left || next.top != dragged.top) {
+      std::cerr << "Candidate did not retain its dragged position in the next composition.\n";
+      DestroyWindow(window);
+      CoUninitialize();
+      return 1;
+    }
+    if (!SendKey(VK_SPACE)) return 1;
+    PumpFor(500);
+    std::cout << "PASS: Alt-dragged candidate position persists across compositions.\n";
   }
   if (testHorizontalNavigation) {
     // One right press per candidate should move from the first item to the

@@ -24,6 +24,7 @@ class CandidatePresenter
     // deriving it from the caret, for when no caret position is known at all.
     // nullptr returns to caret placement; Hide() clears it too.
     void SetPinnedCardOrigin(const POINT *origin);
+    bool GetCardScreenOrigin(POINT &origin) const;
 
   private:
     CandidatePresenter();
@@ -74,6 +75,7 @@ class CandidatePresenter
     bool placingHost_ = false;
     bool cardOriginPinned_ = false;
     POINT pinnedCardOrigin_{};
+    POINT lastCardOffsetPx_{};
     POINT hoverBaseline_{};
     // 已为哪一页报过「指针停在候选上」，同一页只报一次。
     std::uint64_t hoverNotedGeneration_ = 0;
