@@ -1,4 +1,5 @@
 #include "cloud_translation.h"
+#include "sentence_translation.h"
 
 #include "config/ime_config.h"
 #include "ai_translation.h"
@@ -398,3 +399,18 @@ std::string LookupCache(const std::string &key, EnglishIme::TranslationDirection
     return found == g_cache.end() ? std::string{} : found->second;
 }
 } // namespace CloudTranslation
+
+SentenceTranslation::Result SentenceTranslation::TranslateEnglishToChinese(const std::string &source)
+{
+    if (!detail::IsValidSource(source))
+        return {Status::InvalidInput, {}};
+    const auto config = GetConfiguredTranslation();
+    if (!config)
+        return {Status::ProviderUnavailable, {}};
+    const auto resolved = ResolveActiveProvider(*config);
+    if (!resolved)
+        return {Status::ProviderUnavailable, {}};
+    return detail::TranslateWith(source, [&](const auto &texts, const auto &from, const auto &to) {
+        return TranslateWithProvider(*resolved, texts, from, to);
+    });
+}

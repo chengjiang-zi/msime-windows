@@ -213,6 +213,8 @@ set(SRC_FILES
     "./src/cloud/cloud_ime.h"
     "./src/cloud/cloud_translation.cpp"
     "./src/cloud/cloud_translation.h"
+    "./src/cloud/sentence_translation.cpp"
+    "./src/cloud/sentence_translation.h"
     "./src/cloud/custom_translation.cpp"
     "./src/cloud/custom_translation.h"
     "./src/cloud/aliyun_mt.cpp"
