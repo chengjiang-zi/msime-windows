@@ -1,4 +1,5 @@
 #include "Key/SentenceTranslationPolicy.h"
+#include "../../engine/contracts/sentence_translation_wire.h"
 
 #include <iostream>
 #include <string>
@@ -38,5 +39,16 @@ int main()
     Check(!CanApply(saved, saved, false, true, true), "selection changed");
     Check(!CanApply(saved, saved, true, false, true), "source edited");
     Check(!CanApply(saved, saved, true, true, false), "translation failed");
+    using namespace FanyImeSentenceTranslation;
+    const auto encoded = EncodeReply(42, Status::Success, L"你好，世界！");
+    const auto decoded = DecodeReply(encoded);
+    Check(decoded && decoded->requestId == 42 && decoded->status == Status::Success && decoded->text == L"你好，世界！",
+          "sentence response round trip");
+    const auto overflow = DecodeReply(EncodeReply(42, Status::Success, std::wstring(200, L'x')));
+    Check(overflow && overflow->status == Status::TranslationFailed && overflow->text.empty(),
+          "do not truncate oversized translation");
+    Check(!DecodeReply(L"18446744073709551616|0|x"), "reject overflowed request id");
+    Check(!DecodeReply(L"42|0|"), "reject empty successful translation");
+    Check(!DecodeReply(L"42|3|unexpected"), "reject text on failed translation");
     return failures ? 1 : 0;
 }

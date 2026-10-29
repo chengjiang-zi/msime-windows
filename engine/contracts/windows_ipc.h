@@ -125,6 +125,9 @@ constexpr std::uint32_t PuncSwitch = 8;
 constexpr std::uint32_t DoubleSingleByteSwitch = 9;
 // Main, negotiated InputStateShortcuts: keycode is the stable input-state Action ID.
 constexpr std::uint32_t InputStateAction = 17;
+// Negotiated only. pinyin_string contains the explicitly requested source;
+// no automatic candidate, key event, or diagnostic log uses this event.
+constexpr std::uint32_t SentenceTranslationRequest = 18;
 constexpr bool IsRouteDeactivation(std::uint32_t event_type)
 {
     return event_type == ClientDeactivated || event_type == ClientSuspended;
@@ -488,7 +491,9 @@ constexpr std::uint32_t HorizontalArrowSelectionChanged = 39;
 // Server re-derives the path from its own state and starts the installer. Broadcast to every
 // connected client: the download usually finishes while the user types elsewhere.
 constexpr std::uint32_t UpdateInstallerReady = 40;
-constexpr std::uint32_t MaxKnown = UpdateInstallerReady;
+// Negotiated only. Payload is encoded by sentence_translation_wire.h.
+constexpr std::uint32_t SentenceTranslationResult = 41;
+constexpr std::uint32_t MaxKnown = SentenceTranslationResult;
 // Source compatibility for the Server's historical spellings.
 constexpr std::uint32_t SwitchToEn = SwitchToEnglish;
 constexpr std::uint32_t SwitchToCn = SwitchToChinese;

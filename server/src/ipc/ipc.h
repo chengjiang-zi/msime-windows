@@ -133,6 +133,7 @@ bool ClientNegotiatedCaretStateIndicator(uint64_t client_id);
 bool ClientNegotiatedTrilingualCycle(uint64_t client_id);
 bool ClientNegotiatedInputStateShortcuts(uint64_t client_id);
 bool ClientNegotiatedTemporaryJapanese(uint64_t client_id);
+bool ClientNegotiatedSentenceTranslation(uint64_t client_id);
 uint64_t RegisterToTsfWorkerThreadPipeClient(uint64_t client_id, HANDLE pipe);
 uint64_t BeginPipeClientHandler(HANDLE pipe);
 void EndPipeClientHandler(uint64_t handler_id);

@@ -1,5 +1,6 @@
 // 命名管道服务端：各管道的监听线程、主管道客户端的握手与事件路由，以及关停时唤醒监听。
 #include "ipc/event_listener_internal.h"
+#include "ipc/event_listener_sentence.h"
 #include <Windows.h>
 #include <namedpipeapi.h>
 #include <string>
@@ -208,6 +209,7 @@ bool IsKnownMainPipeEvent(UINT event_type)
     case FanyImePipeEventType::ClientSuspended:
     case FanyImePipeEventType::FocusRestored:
     case FanyImePipeEventType::HideCaretState:
+    case FanyImePipeEventType::SentenceTranslationRequest:
         return true;
     default:
         return false;
@@ -241,6 +243,16 @@ bool IsValidMainPipeFrame(const FanyImeNamedpipeData &pipe_data)
         // FocusSessionReady can never acknowledge token zero. Reject the
         // activation instead of creating a server epoch that TSF cannot fence.
         return false;
+    }
+    if (pipe_data.event_type == FanyImePipeEventType::SentenceTranslationRequest)
+    {
+        if (pipe_data.request_id == 0 || pipe_data.request_id == FANY_IME_NO_REQUEST_ID ||
+            pipe_data.pinyin_length == 0 || pipe_data.pinyin_length > 120 || pipe_data.keycode != 0 ||
+            pipe_data.wch != 0 || pipe_data.modifiers_down != 0)
+            return false;
+        for (int i = 0; i < pipe_data.pinyin_length; ++i)
+            if (pipe_data.pinyin_string[i] == L'\0')
+                return false;
     }
     return true;
 }
@@ -565,6 +577,12 @@ void MainPipeClientThread(HANDLE clientPipe, uint64_t handlerId)
         LogPipeEvent(L"main-pipe", pipeData.event_type, pipeData.keycode, pipeData.wch, pipeData.modifiers_down);
         switch (pipeData.event_type)
         {
+        case FanyImePipeEventType::SentenceTranslationRequest: {
+            if (ClientNegotiatedSentenceTranslation(clientId) && PipeClientOwnsForegroundInput(clientId))
+                SubmitSentenceTranslation(clientId, activation.epoch, pipeData.request_id,
+                                          std::wstring(pipeData.pinyin_string, pipeData.pinyin_length));
+            break;
+        }
         case FanyImePipeEventType::InputStateAction:
         case FanyImePipeEventType::KeyEvent: {
             // 与 worker 侧的 dispatch 探针配对：reader 收到键包即记，两边对照可把丢键

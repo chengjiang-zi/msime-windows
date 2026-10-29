@@ -75,6 +75,8 @@ set(TEST_SOURCE_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/test_translation_gloss.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/test_sentence_translation.cpp"
     "${CMAKE_SOURCE_DIR}/src/cloud/sentence_translation.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/test_sentence_translation_worker.cpp"
+    "${CMAKE_SOURCE_DIR}/src/cloud/sentence_translation_worker.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/test_default_config_credentials.cpp"
     "${CMAKE_SOURCE_DIR}/src/cloud/translation_gloss.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/test_custom_translation.cpp"

@@ -1,4 +1,5 @@
 #include "ipc/event_listener.h"
+#include "ipc/event_listener_sentence.h"
 #include "log/fanylog.h"
 #include "window/ime_windows.h"
 #include <commctrl.h>
@@ -199,6 +200,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE /*hPrevInstance*/,
                             [](std::vector<EnglishIme::TranslationResult> results, uint64_t generation) {
                                 FanyNamedPipe::EnqueueCandidateTranslations(std::move(results), generation, true);
                             });
+    FanyNamedPipe::StartSentenceTranslation();
     MixedCandidates::Start(CommonUtils::get_ime_data_path() + "\\english.db",
                            CommonUtils::get_ime_data_path() + "\\others.db",
                            [](MixedCandidates::Result result, const std::string &input, uint64_t generation) {
@@ -226,6 +228,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE /*hPrevInstance*/,
     FanyNamedPipe::RegisterStatusSnapshotWindow(nullptr);
 
     EnglishIme::Stop();
+    FanyNamedPipe::StopSentenceTranslation();
     CloudTranslation::Stop();
     MixedCandidates::Stop();
     AiAssistant::Stop();

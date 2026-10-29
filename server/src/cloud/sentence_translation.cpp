@@ -3,6 +3,7 @@
 #include <utf8.h>
 #include <algorithm>
 #include <cctype>
+#include <utility>
 
 namespace SentenceTranslation::detail
 {
