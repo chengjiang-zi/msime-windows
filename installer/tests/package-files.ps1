@@ -47,6 +47,9 @@ try {
         'skins/default/fluent/skin.toml',
         'skins/default/canvas/skin.toml'
     )) { Write-Fixture $file }
+    Write-Fixture 'server/src/resource/ChengjiangIME.ico' 'personal-app-icon'
+    Write-Fixture 'windows/image/chengjiang.ico' 'personal-tip-icon'
+    Write-Fixture 'server/assets/settings/chengjiang.png' 'personal-settings-icon'
     Write-Fixture 'skins/demo-skin/skin.toml' "schema_version = 1`nid = `"demo-skin`"`n"
     Write-Fixture 'skins/demo-skin/assets/background.png' 'png'
     Write-Fixture 'skins/unverified/skin.toml' "schema_version = 1`nid = `"unverified`"`n[license]`nassets = `"UNVERIFIED-DEMO-ONLY`"`n"
@@ -72,6 +75,15 @@ strings = "あ亜".encode()
 '@ (Join-Path $fixture 'MetasequoiaImeDict/out')
     if ($LASTEXITCODE -ne 0) { throw 'Failed to create packaging fixture' }
     & (Join-Path $installer 'Prepare-PackageFiles.ps1') -RepoRoot $fixture -TargetVersion '2026.9.1' -IncludeSymbols
+    foreach ($icon in @{
+        'MetasequoiaIME.ico' = 'personal-app-icon'
+        'MetasequoiaImeTip.ico' = 'personal-tip-icon'
+        'app_data/assets/settings/chengjiang.png' = 'personal-settings-icon'
+    }.GetEnumerator()) {
+        if ([IO.File]::ReadAllText((Join-Path $installer $icon.Key)) -ne $icon.Value) {
+            throw "Personal icon was not staged correctly: $($icon.Key)"
+        }
+    }
     foreach ($file in @('app_data/assets/settings/arrow.svg', 'app_data/assets/settings/sidebar/about.svg',
                          'app_data/dictionary-manifest.json',
                          'app_data/dict_pinyin.dat',
