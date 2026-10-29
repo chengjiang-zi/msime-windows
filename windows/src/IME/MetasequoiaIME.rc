@@ -15,7 +15,7 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDIS_METASEQUOIAIME          ICON                    "..\\..\\image\\msime.ico"
+IDIS_METASEQUOIAIME          ICON                    "..\\..\\image\\chengjiang.ico"
 IDI_IME_MODE_ON         ICON                    "..\\..\\image\\cn-light.ico"
 IDI_IME_MODE_OFF        ICON                    "..\\..\\image\\en-light.ico"
 IDI_IME_MODE_ON_DARK    ICON                    "..\\..\\image\\cn-dark.ico"

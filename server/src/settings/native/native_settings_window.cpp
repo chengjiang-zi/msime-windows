@@ -1302,7 +1302,7 @@ class SidebarHeader : public msimeui::Visual
 
   private:
     TextLayout title_;
-    BitmapImage logo_{AssetPath(L"msime.png"), 25.0f, 25.0f, 6.0f};
+    BitmapImage logo_{AssetPath(L"chengjiang.png"), 25.0f, 25.0f, 6.0f};
 };
 
 // The search box at the top of the sidebar. Its suggestions open in a flyout over the window, in

@@ -36,7 +36,7 @@ static const GUID SupportCategories[] = {
     GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
 };
 
-// Copy of the profile icon (msime.ico) that the installer keeps at a fixed path, one level above
+// Copy of the personal profile icon (chengjiang.ico) that the installer keeps at a fixed path, one level above
 // the DLL's directory. The installer puts the DLL into a fresh msime_v* directory on every upgrade,
 // so an icon path pointing at the DLL itself changes with each install; if the taskbar re-reads the
 // icon while that path is in flux, it falls back to a text label for the language and keeps showing

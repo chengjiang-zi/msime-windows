@@ -75,10 +75,10 @@ $pinyinTable = Join-Path $RepoRoot (Join-Path $ServerDirectory 'assets\tables\pi
 $pinyinModel = Join-Path $RepoRoot (Join-Path $PinyinModelDirectory 'dict_pinyin.dat')
 $helpcodeSource = Join-Path $RepoRoot (Join-Path $HelpCodeDirectory 'helpcodes')
 $radicalTable = Join-Path $RepoRoot (Join-Path $RadicalDirectory 'decomposition.txt')
-$appIcon = Join-Path $RepoRoot (Join-Path $ServerDirectory 'src\resource\MetasequoiaIME.ico')
+$appIcon = Join-Path $RepoRoot (Join-Path $ServerDirectory 'src\resource\ChengjiangIME.ico')
 # 输入法语言配置的图标，与 TSF DLL 里的 IDIS_METASEQUOIAIME 是同一个文件。安装器把它放到固定路径，
 # DLL 注册时优先用它，免得图标路径随版本目录变化（见 msime_setup.iss）。
-$tipIcon = Join-Path $RepoRoot (Join-Path $TsfDirectory 'image\msime.ico')
+$tipIcon = Join-Path $RepoRoot (Join-Path $TsfDirectory 'image\chengjiang.ico')
 $thirdPartyNotices = Join-Path $RepoRoot (Join-Path $NoticesDirectory 'THIRD_PARTY_NOTICES.txt')
 $license = Join-Path $RepoRoot 'LICENSE'
 $dictionaryDb = Join-Path $RepoRoot (Join-Path $DictionaryDirectory 'out\msime.db')
@@ -114,7 +114,7 @@ if ($missingServerPdb.Count -gt 0) {
 }
 Assert-PathExists -LiteralPath $serverConfig -Description 'Server config.toml'
 Assert-PathExists -LiteralPath $appIcon -Description '应用图标'
-Assert-PathExists -LiteralPath $tipIcon -Description '输入法语言配置图标 msime.ico'
+Assert-PathExists -LiteralPath $tipIcon -Description '个人版输入法语言配置图标 chengjiang.ico'
 Assert-PathExists -LiteralPath $thirdPartyNotices -Description '第三方声明 THIRD_PARTY_NOTICES.txt'
 Assert-PathExists -LiteralPath $license -Description '许可证 LICENSE'
 Assert-PathExists -LiteralPath $settingsAssets -Description '设置窗口图片资源目录'

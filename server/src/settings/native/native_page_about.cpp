@@ -254,7 +254,7 @@ class AboutMark : public msimeui::Visual
     }
 
   private:
-    BitmapImage logo_{AssetPath(L"msime.png"), 32.0f, 32.0f};
+    BitmapImage logo_{AssetPath(L"chengjiang.png"), 32.0f, 32.0f};
 };
 
 CssButton::Style DialogButtonStyle(bool primary)
