@@ -71,7 +71,8 @@ TEST_CASE(ipc_pipe_ready_is_a_distinct_server_reply)
     REQUIRE_EQ(Global::DataFromServerMsgTypeToTsfWorkerThread::EnumerationCommaKeysChanged, 38u);
     REQUIRE_EQ(Global::DataFromServerMsgTypeToTsfWorkerThread::HorizontalArrowSelectionChanged, 39u);
     REQUIRE_EQ(Global::DataFromServerMsgTypeToTsfWorkerThread::UpdateInstallerReady, 40u);
-    REQUIRE_EQ(Global::DataFromServerMsgTypeToTsfWorkerThread::MaxKnown, 40u);
+    REQUIRE_EQ(Global::DataFromServerMsgTypeToTsfWorkerThread::SentenceTranslationResult, 41u);
+    REQUIRE_EQ(Global::DataFromServerMsgTypeToTsfWorkerThread::MaxKnown, 41u);
     REQUIRE(Global::DataFromServerMsgTypeToTsfWorkerThread::FocusSessionReady >
             Global::DataFromServerMsgTypeToTsfWorkerThread::PagingCommaPeriodChanged);
     REQUIRE(Global::DataFromServerMsgTypeToTsfWorkerThread::PipeReady >
@@ -135,7 +136,7 @@ TEST_CASE(ipc_pipe_ready_is_a_distinct_server_reply)
     REQUIRE(Global::DataFromServerMsgTypeToTsfWorkerThread::UpdateInstallerReady >
             Global::DataFromServerMsgTypeToTsfWorkerThread::HorizontalArrowSelectionChanged);
     REQUIRE_EQ(Global::DataFromServerMsgTypeToTsfWorkerThread::MaxKnown,
-               Global::DataFromServerMsgTypeToTsfWorkerThread::UpdateInstallerReady);
+               Global::DataFromServerMsgTypeToTsfWorkerThread::SentenceTranslationResult);
 }
 
 TEST_CASE(ipc_client_suspension_is_a_distinct_nonterminal_route_reset)
@@ -143,6 +144,8 @@ TEST_CASE(ipc_client_suspension_is_a_distinct_nonterminal_route_reset)
     REQUIRE_EQ(FanyImePipeEventType::InputStateAction, 17u);
     REQUIRE_EQ(FanyImeProtocol::InputStateShortcuts, 1u << 7);
     REQUIRE_EQ(FanyImeProtocol::TemporaryJapaneseLongVowel, 1u << 8);
+    REQUIRE_EQ(FanyImeProtocol::SentenceTranslation, 1u << 9);
+    REQUIRE_EQ(FanyImePipeEventType::SentenceTranslationRequest, 18u);
     REQUIRE_EQ(FanyImePipeEventType::ClientActivated, 11u);
     REQUIRE_EQ(FanyImePipeEventType::ClientDeactivated, 12u);
     REQUIRE_EQ(FanyImePipeEventType::StatusSnapshot, 13u);
