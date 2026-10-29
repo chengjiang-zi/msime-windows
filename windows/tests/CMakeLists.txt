@@ -15,6 +15,11 @@ target_include_directories(test_vim_mode PRIVATE ../src)
 target_compile_features(test_vim_mode PRIVATE cxx_std_17)
 add_test(NAME vim_mode COMMAND test_vim_mode)
 
+add_executable(test_sentence_translation_policy sentence_translation_policy.cpp)
+target_include_directories(test_sentence_translation_policy PRIVATE ../src)
+target_compile_features(test_sentence_translation_policy PRIVATE cxx_std_17)
+add_test(NAME sentence_translation_policy COMMAND test_sentence_translation_policy)
+
 add_executable(test_client_fallback client_fallback.cpp)
 target_include_directories(test_client_fallback PRIVATE ../src)
 target_compile_features(test_client_fallback PRIVATE cxx_std_17)
