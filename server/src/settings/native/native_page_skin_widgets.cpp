@@ -64,14 +64,16 @@ struct ToolbarIcon
 // ftb/default.html after the preview strips #en, #fullwidth and #puncEn.
 const ToolbarIcon kToolbarIcons[] = {
     {0xE982, L"中", -1}, {0xEC46, L"半", 0}, {0xF111, L"。", 1}, {0xE88D, L"简", 2},
-    {0xE76E, L"表", 3},  {0xE765, L"键", 4}, {0xE713, L"设", 5},
+    {0xE76E, L"表", 3},  {0xE765, L"键", 4}, {0xE720, L"音", 5},
+    {0xE713, L"设", 6},
 };
 
 // The skin's button keys for kToolbarIcons, in the same order, with the state each icon shows:
 // Chinese input, half width, Chinese punctuation, simplified.
 const ToolbarImageButtonRequest kToolbarButtons[] = {
     {"status", "cn"}, {"fullwidth", "half"},   {"punctuation", "cn"}, {"character_set", "simplified"},
-    {"emoji", ""},    {"screen_keyboard", ""}, {"settings", ""},
+    {"emoji", ""},    {"screen_keyboard", ""}, {"voice", ""},
+    {"settings", ""},
 };
 static_assert(std::size(kToolbarButtons) == std::size(kToolbarIcons));
 

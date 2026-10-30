@@ -495,6 +495,8 @@ struct FloatingToolbarItemsConfig
     bool character_set = true;
     bool emoji = true;
     bool screen_keyboard = false;
+    // 语音输入按钮：云端和本地识别共用这一项开关。
+    bool voice = false;
     bool settings = true;
 };
 const FloatingToolbarItemsConfig &GetConfiguredFloatingToolbarItems();

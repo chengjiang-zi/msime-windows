@@ -1257,7 +1257,7 @@ const std::vector<std::string> *ToolbarButtonStates(const std::string &key)
         return &punctuation;
     if (key == "character_set")
         return &characterSet;
-    if (key == "emoji" || key == "screen_keyboard" || key == "settings")
+    if (key == "emoji" || key == "screen_keyboard" || key == "voice" || key == "settings")
         return &stateless;
     return nullptr;
 }
